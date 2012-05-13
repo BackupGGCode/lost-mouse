@@ -27,7 +27,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.archiver.mingw.base.289303971" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.mingw.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.1054224123" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base">
 								<option id="gnu.cpp.compiler.option.include.paths.456636497" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;C:\opencv_2.4.0_mingw32\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;C:\opencv\include&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.525277696" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -37,25 +37,20 @@
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.mingw.base.1322767573" name="MinGW C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.mingw.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.mingw.base.1676664973" name="MinGW C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.mingw.base">
 								<option id="gnu.cpp.link.option.paths.145445336" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
-									<listOptionValue builtIn="false" value="&quot;C:\opencv_2.4.0_mingw32\lib&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;C:\opencv\lib&quot;"/>
 								</option>
 								<option id="gnu.cpp.link.option.libs.872783123" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
-									<listOptionValue builtIn="false" value="libopencv_calib3d240"/>
-									<listOptionValue builtIn="false" value="libopencv_contrib240"/>
-									<listOptionValue builtIn="false" value="libopencv_core240"/>
-									<listOptionValue builtIn="false" value="libopencv_features2d240"/>
-									<listOptionValue builtIn="false" value="libopencv_flann240"/>
-									<listOptionValue builtIn="false" value="libopencv_gpu240"/>
-									<listOptionValue builtIn="false" value="libopencv_highgui240"/>
-									<listOptionValue builtIn="false" value="libopencv_imgproc240"/>
-									<listOptionValue builtIn="false" value="libopencv_legacy240"/>
-									<listOptionValue builtIn="false" value="libopencv_ml240"/>
-									<listOptionValue builtIn="false" value="libopencv_nonfree240"/>
-									<listOptionValue builtIn="false" value="libopencv_objdetect240"/>
-									<listOptionValue builtIn="false" value="libopencv_photo240"/>
-									<listOptionValue builtIn="false" value="libopencv_stitching240"/>
-									<listOptionValue builtIn="false" value="libopencv_video240"/>
-									<listOptionValue builtIn="false" value="libopencv_videostab240"/>
+									<listOptionValue builtIn="false" value="libopencv_calib3d231"/>
+									<listOptionValue builtIn="false" value="libopencv_contrib231"/>
+									<listOptionValue builtIn="false" value="libopencv_core231"/>
+									<listOptionValue builtIn="false" value="libopencv_features2d231"/>
+									<listOptionValue builtIn="false" value="libopencv_flann231"/>
+									<listOptionValue builtIn="false" value="libopencv_gpu231"/>
+									<listOptionValue builtIn="false" value="libopencv_highgui231"/>
+									<listOptionValue builtIn="false" value="libopencv_imgproc231"/>
+									<listOptionValue builtIn="false" value="libopencv_ml231"/>
+									<listOptionValue builtIn="false" value="libopencv_objdetect231"/>
+									<listOptionValue builtIn="false" value="libopencv_video231"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1924154803" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>

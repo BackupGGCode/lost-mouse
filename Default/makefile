@@ -43,7 +43,7 @@ all: lost-mouse
 lost-mouse: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MinGW C++ Linker'
-	g++ -L"C:\opencv_2.4.0_mingw32\lib" -o "lost-mouse" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -L"C:\opencv\lib" -o "lost-mouse" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
