@@ -40,17 +40,22 @@
 									<listOptionValue builtIn="false" value="&quot;C:\opencv\lib&quot;"/>
 								</option>
 								<option id="gnu.cpp.link.option.libs.872783123" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
-									<listOptionValue builtIn="false" value="libopencv_calib3d231"/>
-									<listOptionValue builtIn="false" value="libopencv_contrib231"/>
-									<listOptionValue builtIn="false" value="libopencv_core231"/>
-									<listOptionValue builtIn="false" value="libopencv_features2d231"/>
-									<listOptionValue builtIn="false" value="libopencv_flann231"/>
-									<listOptionValue builtIn="false" value="libopencv_gpu231"/>
-									<listOptionValue builtIn="false" value="libopencv_highgui231"/>
-									<listOptionValue builtIn="false" value="libopencv_imgproc231"/>
-									<listOptionValue builtIn="false" value="libopencv_ml231"/>
-									<listOptionValue builtIn="false" value="libopencv_objdetect231"/>
-									<listOptionValue builtIn="false" value="libopencv_video231"/>
+									<listOptionValue builtIn="false" value="libopencv_calib3d240"/>
+									<listOptionValue builtIn="false" value="libopencv_contrib240"/>
+									<listOptionValue builtIn="false" value="libopencv_core240"/>
+									<listOptionValue builtIn="false" value="libopencv_features2d240"/>
+									<listOptionValue builtIn="false" value="libopencv_flann240"/>
+									<listOptionValue builtIn="false" value="libopencv_gpu240"/>
+									<listOptionValue builtIn="false" value="libopencv_highgui240"/>
+									<listOptionValue builtIn="false" value="libopencv_imgproc240"/>
+									<listOptionValue builtIn="false" value="libopencv_legacy240"/>
+									<listOptionValue builtIn="false" value="libopencv_ml240"/>
+									<listOptionValue builtIn="false" value="libopencv_nonfree240"/>
+									<listOptionValue builtIn="false" value="libopencv_objdetect240"/>
+									<listOptionValue builtIn="false" value="libopencv_photo240"/>
+									<listOptionValue builtIn="false" value="libopencv_stitching240"/>
+									<listOptionValue builtIn="false" value="libopencv_video240"/>
+									<listOptionValue builtIn="false" value="libopencv_videostab240"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1924154803" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
