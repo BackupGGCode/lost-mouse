@@ -100,29 +100,29 @@ int camshiftDemo(int argc, const char** argv){
 		frame.copyTo(image);
 
 		if (!paused) {
-			//konwersja kolorów w obrazku
+			//color space convertion:bgr->hsv
 			cvtColor(image, hsv, CV_BGR2HSV);
 
 			if (trackObject) {
 				int _vmin = vmin, _vmax = vmax;
 
-				//czy element tablicy miesci się pomiędzy dwoma innymi tablicami
+				//if element is between two arrays range
 				inRange(hsv, Scalar(0, smin, MIN(_vmin,_vmax)), Scalar(180, 256, MAX(_vmin, _vmax)),
 						mask);
 				int ch[] = { 0, 0 };
 				hue.create(hsv.size(), hsv.depth());
 
-				//kopiuje sygnały z jednego do drugiego
+				//copy hue from HSV color space
 				mixChannels(&hsv, 1, &hue, 1, ch, 1);
 
 				if (trackObject < 0) {
-					//zaznaczenie elementu orbazka który ma być przetwarzany
+					//creating RegionOfInterest and Mask of it
 					Mat roi(hue, selection), maskroi(mask, selection);
 
-					//obliczanie histogramu
+					//calculating Histogram
 					calcHist(&roi, 1, 0, maskroi, hist, 1, &hsize, &phranges);
 
-					//normalizuje zakres zmiennych
+					//normalization of values for hitogram
 					normalize(hist, hist, 0, 255, CV_MINMAX);
 
 					trackWindow = selection;
@@ -137,18 +137,18 @@ int camshiftDemo(int argc, const char** argv){
 
 					for (int i = 0; i < hsize; i++) {
 						int val = saturate_cast<int>(hist.at<float>(i) * histimg.rows / 255);
-						//rysuje wypełniony prostokąt
+						//paint filled rectangle
 						rectangle(histimg, Point(i * binW, histimg.rows),
 								Point((i + 1) * binW, histimg.rows - val), Scalar(buf.at<Vec3b>(i)), -1,
 								8);
 					}
 				}
 
-				//rozpoznawanie czy pasuje do zaznaczonego obszaru - wsteczna propagacja histogramu
+				//if color match histogram of ROI -> wsteczna propagacja histogramu
 				calcBackProject(&hue, 1, 0, hist, backproj, &phranges);
 				backproj &= mask;
 
-				//znalezienie obiektu na podstawie kryteriów
+				//Finds an object center, size, and orientation.
 				RotatedRect trackBox = CamShift(backproj, trackWindow,
 						TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1));
 				if (trackWindow.area() <= 1) {
@@ -157,10 +157,12 @@ int camshiftDemo(int argc, const char** argv){
 							trackWindow.y + r) & Rect(0, 0, cols, rows);
 				}
 
-				if (backprojMode)
+				if (backprojMode){
+					//grey scale of matching to histogram
 					cvtColor(backproj, image, CV_GRAY2BGR);
+				}
 
-				//ryzuje elipse z wyszukanym obszarem
+				//paint eclipse around the object
 				ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
 			}
 		} else if (trackObject < 0)
@@ -174,7 +176,6 @@ int camshiftDemo(int argc, const char** argv){
 		imshow("CamShift Demo", image);
 		imshow("Histogram", histimg);
 
-		//obsługa naciskanych klawiszy
 		char c = (char) waitKey(10);
 		if (c == 27)
 			break;
