@@ -60,7 +60,7 @@ void help() {
 
 const char* keys = { "{1|  | 0 | camera number}" };
 
-int camshiftDemo(int argc, const char** argv){
+int camshiftDemo(int argc, const char** argv) {
 	VideoCapture cap;
 	Rect trackWindow;
 	RotatedRect trackBox;
@@ -90,6 +90,12 @@ int camshiftDemo(int argc, const char** argv){
 	Mat frame, hsv, hue, mask, hist, histimg = Mat::zeros(200, 320, CV_8UC3), backproj;
 	bool paused = false;
 
+	Mat median_ia;
+	/*Mat binary_ia,dilate_ia,erode_ia;
+	double binary_lvl = 12.0;*/
+
+	Mat morf_elem;
+
 	for (;;) {
 		if (!paused) {
 			cap >> frame;
@@ -110,10 +116,30 @@ int camshiftDemo(int argc, const char** argv){
 				inRange(hsv, Scalar(0, smin, MIN(_vmin,_vmax)), Scalar(180, 256, MAX(_vmin, _vmax)),
 						mask);
 				int ch[] = { 0, 0 };
+
+				//creating blank image
 				hue.create(hsv.size(), hsv.depth());
 
 				//copy hue from HSV color space
 				mixChannels(&hsv, 1, &hue, 1, ch, 1);
+
+				//median filter
+				median_ia.create(hue.size(), hue.depth());
+				medianBlur(hue, median_ia, 7);
+
+				/*//binaryzation
+				binary_ia.create(hue.size(), hue.depth());
+				threshold(median_ia, binary_ia, binary_lvl, 255.0, THRESH_BINARY);
+
+				//dilate
+				dilate_ia.create(hue.size(), hue.depth());
+				dilate(median_ia, dilate_ia,morf_elem);
+
+				//erode
+				erode_ia.create(hue.size(), hue.depth());
+				erode(dilate_ia, erode_ia, morf_elem, Point(-1,-1),3);*/
+
+				hue = median_ia;
 
 				if (trackObject < 0) {
 					//creating RegionOfInterest and Mask of it
@@ -157,7 +183,7 @@ int camshiftDemo(int argc, const char** argv){
 							trackWindow.y + r) & Rect(0, 0, cols, rows);
 				}
 
-				if (backprojMode){
+				if (backprojMode) {
 					//grey scale of matching to histogram
 					cvtColor(backproj, image, CV_GRAY2BGR);
 				}
