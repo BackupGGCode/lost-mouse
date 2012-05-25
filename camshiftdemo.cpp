@@ -4,12 +4,14 @@
 
 #include <iostream>
 #include <ctype.h>
+#include <windows.h>
 
 using namespace cv;
 using namespace std;
 
 Mat image;
-
+//plik video do wczytania
+string filename="film.avi";
 bool backprojMode = false;
 bool selectObject = false;
 int trackObject = 0;
@@ -17,6 +19,18 @@ bool showHist = true;
 Point origin;
 Rect selection;
 int vmin = 10, vmax = 256, smin = 30;
+
+
+void movemouse(RotatedRect trackBox, long right, long bottom, int wight, int height){
+	Point2f centr=trackBox.center;
+//normalizacja
+	int iks=(int)centr.x*((int)right/wight);
+	int igrek=(int)centr.y*((int)bottom/height);
+	//ustawiamy kursor (btw 0,0 to lewy gorny rog ekranu)
+	SetCursorPos(iks, igrek);
+	//cout<<iks<<","<<igrek<<endl;
+}
+
 
 void onMouse(int event, int x, int y, int, void*) {
 	if (selectObject) {
@@ -60,17 +74,22 @@ void help() {
 
 const char* keys = { "{1|  | 0 | camera number}" };
 
-int camshiftDemo(int argc, const char** argv) {
-	VideoCapture cap;
+int camshiftDemo(int argc, const char** argv, long eright, long ebottom) {
+	//konstruktor VideoCapture, jako argument nazwa pliku wideo
+	VideoCapture cap(filename);
+	//pobiera parametry filmu
+	int movie_width=cap.get(CV_CAP_PROP_FRAME_WIDTH);
+	int movie_height=cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+
 	Rect trackWindow;
 	RotatedRect trackBox;
 	int hsize = 16;
 	float hranges[] = { 0, 180 };
 	const float* phranges = hranges;
 	CommandLineParser parser(argc, argv, keys);
-	int camNum = parser.get<int>("1");
+	//int camNum = parser.get<int>("1");
 
-	cap.open(camNum);
+/*	cap.open(camNum);
 
 	if (!cap.isOpened()) {
 		help();
@@ -78,7 +97,7 @@ int camshiftDemo(int argc, const char** argv) {
 		cout << "Current parameter's value: \n";
 		parser.printParams();
 		return -1;
-	}
+	}*/
 
 	namedWindow("Histogram", 0);
 	namedWindow("CamShift Demo", 0);
@@ -188,8 +207,10 @@ int camshiftDemo(int argc, const char** argv) {
 					cvtColor(backproj, image, CV_GRAY2BGR);
 				}
 
-				//paint eclipse around the object
+				//paint ellipse around the object
 				ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
+				movemouse(trackBox, eright, ebottom,movie_width, movie_height);
+
 			}
 		} else if (trackObject < 0)
 			paused = false;
@@ -231,9 +252,21 @@ int camshiftDemo(int argc, const char** argv) {
 	return 0;
 }
 
+
 int main(int argc, const char** argv) {
 	help();
-	camshiftDemo(argc, argv);
+	RECT desktopRect;
+	//pobieramy wspolrzedne w jakich moze poruszac sie myszka
+	SystemParametersInfo(SPI_GETWORKAREA,NULL,&desktopRect,NULL);
+	long eleft=desktopRect.left;
+	long etop=desktopRect.top;
+	long eright=desktopRect.right;
+	long ebottom=desktopRect.bottom;
+
+	cout<<eleft<<","<<eright<<","<<etop<<","<<ebottom<<endl;
+
+
+	camshiftDemo(argc, argv,eright, ebottom);
 
 	return 0;
 }
