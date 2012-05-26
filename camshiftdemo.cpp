@@ -23,7 +23,7 @@ int vmax = 256;
 int smin = 30;
 
 //plik video do wczytania
-string filename = "film.avi";
+string filename = "black_bg_easy.avi";
 int screenWidth, screenHeight;
 
 void movemouse(RotatedRect trackBox, int wight, int height) {
@@ -34,6 +34,26 @@ void movemouse(RotatedRect trackBox, int wight, int height) {
 	//ustawiamy kursor (btw 0,0 to lewy gorny rog ekranu)
 	SetCursorPos(iks, igrek);
 	//cout<<iks<<","<<igrek<<endl;
+}
+
+//Klik myszki 1- prawy 0-lewy
+void mouseClick(bool side)
+{
+	INPUT    Input={0};
+
+	Input.type= INPUT_MOUSE;
+
+	if(side)
+		{Input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;}
+	else Input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
+	SendInput( 1, &Input, sizeof(INPUT) );
+
+	ZeroMemory(&Input,sizeof(INPUT));
+	Input.type= INPUT_MOUSE;
+	if(side)
+		{Input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;}
+	else Input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
+	SendInput( 1, &Input, sizeof(INPUT) );
 }
 
 void onMouse(int event, int x, int y, int, void*) {
@@ -252,5 +272,9 @@ int main(int argc, const char** argv) {
 	cout << difftime(after, before) << " - duration of the program [s] " << endl;
 	cout << clock() << " - number of clock ticks elapsed since the program was launched" << endl;
 
+	/* test kliniecie prawym przyciskiem myszy
+	 * SetCursorPos(300, 300);
+	mouseClick(1);
+	*/
 	return 0;
 }
