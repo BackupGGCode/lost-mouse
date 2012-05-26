@@ -5,32 +5,36 @@
 #include <iostream>
 #include <ctype.h>
 #include <windows.h>
+#include <time.h>
 
 using namespace cv;
 using namespace std;
 
-Mat image;
-//plik video do wczytania
-string filename="film.avi";
 bool backprojMode = false;
 bool selectObject = false;
-int trackObject = 0;
 bool showHist = true;
+int trackObject = 0;
+Mat image;
 Point origin;
 Rect selection;
-int vmin = 10, vmax = 256, smin = 30;
 
+int vmin = 10;
+int vmax = 256;
+int smin = 30;
 
-void movemouse(RotatedRect trackBox, long right, long bottom, int wight, int height){
-	Point2f centr=trackBox.center;
-//normalizacja
-	int iks=(int)centr.x*((int)right/wight);
-	int igrek=(int)centr.y*((int)bottom/height);
+//plik video do wczytania
+string filename = "film.avi";
+int screenWidth, screenHeight;
+
+void movemouse(RotatedRect trackBox, int wight, int height) {
+	Point2f centr = trackBox.center;
+	//normalizacja 100% video to 100% ekranu
+	int iks = (int) centr.x * (screenWidth / wight);
+	int igrek = (int) centr.y * (screenHeight / height);
 	//ustawiamy kursor (btw 0,0 to lewy gorny rog ekranu)
 	SetCursorPos(iks, igrek);
 	//cout<<iks<<","<<igrek<<endl;
 }
-
 
 void onMouse(int event, int x, int y, int, void*) {
 	if (selectObject) {
@@ -38,7 +42,6 @@ void onMouse(int event, int x, int y, int, void*) {
 		selection.y = MIN(y, origin.y);
 		selection.width = std::abs(x - origin.x);
 		selection.height = std::abs(y - origin.y);
-
 		selection &= Rect(0, 0, image.cols, image.rows);
 	}
 
@@ -57,29 +60,23 @@ void onMouse(int event, int x, int y, int, void*) {
 }
 
 void help() {
-	cout << "\nThis is a demo that shows mean-shift based tracking\n"
-			"You select a color objects such as your face and it tracks it.\n"
-			"This reads from video camera (0 by default, or the camera number the user enters\n"
-			"Usage: \n"
-			"	./camshiftdemo [camera number]\n";
-
 	cout << "\n\nHot keys: \n"
-			"\tESC - quit the program\n"
-			"\tc - stop the tracking\n"
-			"\tb - switch to/from backprojection view\n"
-			"\th - show/hide object histogram\n"
-			"\tp - pause video\n"
+			"\t'ESC' - quit the program\n"
+			"\t'c' - stop the tracking\n"
+			"\t'b' - switch to/from backprojection view\n"
+			"\t'h' - show/hide object histogram\n"
+			"\t' ' - pause video\n"
 			"To initialize tracking, select the object with mouse\n";
 }
 
 const char* keys = { "{1|  | 0 | camera number}" };
 
-int camshiftDemo(int argc, const char** argv, long eright, long ebottom) {
+int camshiftDemo(int argc, const char** argv) {
 	//konstruktor VideoCapture, jako argument nazwa pliku wideo
 	VideoCapture cap(filename);
 	//pobiera parametry filmu
-	int movie_width=cap.get(CV_CAP_PROP_FRAME_WIDTH);
-	int movie_height=cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+	int movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
 
 	Rect trackWindow;
 	RotatedRect trackBox;
@@ -87,17 +84,12 @@ int camshiftDemo(int argc, const char** argv, long eright, long ebottom) {
 	float hranges[] = { 0, 180 };
 	const float* phranges = hranges;
 	CommandLineParser parser(argc, argv, keys);
-	//int camNum = parser.get<int>("1");
 
-/*	cap.open(camNum);
-
-	if (!cap.isOpened()) {
-		help();
-		cout << "***Could not initialize capturing...***\n";
-		cout << "Current parameter's value: \n";
-		parser.printParams();
-		return -1;
-	}*/
+	/*	cap.open(camNum);
+	 if (!cap.isOpened()) {
+	 cout << "***Could not initialize capturing...***\n";
+	 return -1;
+	 }*/
 
 	namedWindow("Histogram", 0);
 	namedWindow("CamShift Demo", 0);
@@ -109,11 +101,7 @@ int camshiftDemo(int argc, const char** argv, long eright, long ebottom) {
 	Mat frame, hsv, hue, mask, hist, histimg = Mat::zeros(200, 320, CV_8UC3), backproj;
 	bool paused = false;
 
-	Mat median_ia;
-	/*Mat binary_ia,dilate_ia,erode_ia;
-	double binary_lvl = 12.0;*/
-
-	Mat morf_elem;
+	Mat median_ia, binary_ia;
 
 	for (;;) {
 		if (!paused) {
@@ -142,21 +130,13 @@ int camshiftDemo(int argc, const char** argv, long eright, long ebottom) {
 				//copy hue from HSV color space
 				mixChannels(&hsv, 1, &hue, 1, ch, 1);
 
+				//binaryzacja
+				binary_ia.create(hue.size(), hue.depth());
+				threshold(hue, binary_ia, 32.0, 256.0, THRESH_BINARY);
+
 				//median filter
 				median_ia.create(hue.size(), hue.depth());
-				medianBlur(hue, median_ia, 7);
-
-				/*//binaryzation
-				binary_ia.create(hue.size(), hue.depth());
-				threshold(median_ia, binary_ia, binary_lvl, 255.0, THRESH_BINARY);
-
-				//dilate
-				dilate_ia.create(hue.size(), hue.depth());
-				dilate(median_ia, dilate_ia,morf_elem);
-
-				//erode
-				erode_ia.create(hue.size(), hue.depth());
-				erode(dilate_ia, erode_ia, morf_elem, Point(-1,-1),3);*/
+				medianBlur(binary_ia, median_ia, 11);
 
 				hue = median_ia;
 
@@ -180,6 +160,7 @@ int camshiftDemo(int argc, const char** argv, long eright, long ebottom) {
 						buf.at<Vec3b>(i) = Vec3b(saturate_cast<uchar>(i * 180. / hsize), 255, 255);
 					cvtColor(buf, buf, CV_HSV2BGR);
 
+					//rysowanie histogramu
 					for (int i = 0; i < hsize; i++) {
 						int val = saturate_cast<int>(hist.at<float>(i) * histimg.rows / 255);
 						//paint filled rectangle
@@ -196,12 +177,14 @@ int camshiftDemo(int argc, const char** argv, long eright, long ebottom) {
 				//Finds an object center, size, and orientation.
 				RotatedRect trackBox = CamShift(backproj, trackWindow,
 						TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1));
+
 				if (trackWindow.area() <= 1) {
 					int cols = backproj.cols, rows = backproj.rows, r = (MIN(cols, rows) + 5) / 6;
 					trackWindow = Rect(trackWindow.x - r, trackWindow.y - r, trackWindow.x + r,
 							trackWindow.y + r) & Rect(0, 0, cols, rows);
 				}
 
+				//jeli widok prawdopodobieństwa
 				if (backprojMode) {
 					//grey scale of matching to histogram
 					cvtColor(backproj, image, CV_GRAY2BGR);
@@ -209,8 +192,9 @@ int camshiftDemo(int argc, const char** argv, long eright, long ebottom) {
 
 				//paint ellipse around the object
 				ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
-				movemouse(trackBox, eright, ebottom,movie_width, movie_height);
 
+				//ruch kursorem myszy
+				movemouse(trackBox, movie_width, movie_height);
 			}
 		} else if (trackObject < 0)
 			paused = false;
@@ -241,7 +225,7 @@ int camshiftDemo(int argc, const char** argv, long eright, long ebottom) {
 			else
 				namedWindow("Histogram", 1);
 			break;
-		case 'p':
+		case ' ':
 			paused = !paused;
 			break;
 		default:
@@ -252,21 +236,21 @@ int camshiftDemo(int argc, const char** argv, long eright, long ebottom) {
 	return 0;
 }
 
-
 int main(int argc, const char** argv) {
 	help();
-	RECT desktopRect;
-	//pobieramy wspolrzedne w jakich moze poruszac sie myszka
-	SystemParametersInfo(SPI_GETWORKAREA,NULL,&desktopRect,NULL);
-	long eleft=desktopRect.left;
-	long etop=desktopRect.top;
-	long eright=desktopRect.right;
-	long ebottom=desktopRect.bottom;
 
-	cout<<eleft<<","<<eright<<","<<etop<<","<<ebottom<<endl;
+	screenWidth = GetSystemMetrics(SM_CXSCREEN);
+	screenHeight = GetSystemMetrics(SM_CYSCREEN);
+	cout << screenWidth << "," << screenHeight << " - resolution of the screen [px]" << endl;
 
+	time_t before, after;
 
-	camshiftDemo(argc, argv,eright, ebottom);
+	before = time(NULL);
+	camshiftDemo(argc, argv);
+	after = time(NULL);
+
+	cout << difftime(after, before) << " - duration of the program [s] " << endl;
+	cout << clock() << " - number of clock ticks elapsed since the program was launched" << endl;
 
 	return 0;
 }
