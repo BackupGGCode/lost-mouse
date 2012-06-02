@@ -86,8 +86,8 @@ int camshiftDemo(VideoCapture& cap) {
 	int movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
 	int select_mouse_autom_timeout = (cap.get(CV_CAP_PROP_FPS) ? cap.get(CV_CAP_PROP_FPS) : 30) * 3.5;
 
-	cout << movie_width << "," << movie_height << " - video width,height [px]" << endl;
-	cout << cap.get(CV_CAP_PROP_FPS) << " - viedo fps (in camera 30fps assumed)" << endl;
+	cout << movie_width << "," << movie_height << " - wymiary obrazu szerokosc,wysokosc [px]" << endl;
+	cout << cap.get(CV_CAP_PROP_FPS) << " - liczba klatek na sekunde (przy kamerze = 30fps)" << endl;
 
 	bool stopE = 0;
 	Rect trackWindow;
@@ -96,7 +96,7 @@ int camshiftDemo(VideoCapture& cap) {
 	float hranges[] = { 0, 180 };
 	const float* phranges = hranges;
 
-	namedWindow("lost-mouse preview");
+	namedWindow("lost-mouse podglad");
 
 	Rect selection_autom;
 	if (select_mouse_autom) {
@@ -105,7 +105,7 @@ int camshiftDemo(VideoCapture& cap) {
 		selection_autom.width = movie_width *0.1;
 		selection_autom.height = movie_height *0.2;
 	} else{
-		setMouseCallback("lost-mouse preview", onMouse, 0);
+		setMouseCallback("lost-mouse podglad", onMouse, 0);
 	}
 
 	Mat frame, hsv, hue, mask, hist, median_ia, binary_ia, backproj;
@@ -124,58 +124,58 @@ int camshiftDemo(VideoCapture& cap) {
 		if (select_mouse_autom && frame_counter == select_mouse_autom_timeout) {
 			selection = selection_autom;
 			trackObject = -1;
-			cout << "automated hand selection - done!" << endl;
+			cout << "automatyczne pobieranie koloru dloni - zrobione!" << endl;
 		}
 
 		frame.copyTo(image);
 
 		if (!paused) {
-			//color space convertion:bgr->hsv
+			//zmiana przestrzeni barwnej:bgr->hsv
 			cvtColor(image, hsv, CV_BGR2HSV);
 
 			if (trackObject) {
 				//TODO: wtf is vmin,vmax,smin
 				int vmin = 10, vmax = 256, smin = 30;
 
-				//if element is between two arrays range
+				//stwierdzenie czy dany element tablicy ma wartosc pomiedzy min i max
 				inRange(hsv, Scalar(0, smin, MIN(vmin,vmax)), Scalar(180, 256, MAX(vmin, vmax)), mask);
 				int ch[] = { 0, 0 };
 
-				//creating blank image
+				//tworzenie pustego obrazu
 				hue.create(hsv.size(), hsv.depth());
 
-				//copy hue from HSV color space
+				//skopiowanie luminancji (Hue) z przestrzeni barw HSV
 				mixChannels(&hsv, 1, &hue, 1, ch, 1);
 
 				//binaryzacja
 				binary_ia.create(hue.size(), hue.depth());
 				threshold(hue, binary_ia, 32.0, 256.0, THRESH_BINARY);
 
-				//median filter
+				//filtr medianowy
 				median_ia.create(hue.size(), hue.depth());
 				medianBlur(binary_ia, median_ia, 3);
 
 				hue = median_ia;
 
 				if (trackObject < 0) {
-					//creating RegionOfInterest and Mask of it
+					//tworzenie maski dla ROI
 					Mat roi(hue, selection), maskroi(mask, selection);
 
-					//calculating Histogram
+					//obliczanie histogramu
 					calcHist(&roi, 1, 0, maskroi, hist, 1, &hsize, &phranges);
 
-					//normalization of values for hitogram
+					//normalizacja wartosci histogramu
 					normalize(hist, hist, 0, 255, CV_MINMAX);
 
 					trackWindow = selection;
 					trackObject = 1;
 				}
 
-				//if color match histogram of ROI -> wsteczna propagacja histogramu
+				//wsteczna propagacja histogramu -> czy kolor pasuje zaznaczonemu obszarowi
 				calcBackProject(&hue, 1, 0, hist, backproj, &phranges);
 				backproj &= mask;
 
-				//Finds an object center, size, and orientation.
+				//znajduje rodek, wymiary i orientacje obiektu
 				RotatedRect trackBox = CamShift(backproj, trackWindow,
 						TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1));
 				if (trackWindow.x == 0) {
@@ -196,7 +196,7 @@ int camshiftDemo(VideoCapture& cap) {
 				}
 
 				if (!stopE) {
-					//paint ellipse around the object
+					//rysuje eklipse
 					ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
 
 					//rysuje prostokat otaczajacy wykryty obszar
@@ -225,7 +225,7 @@ int camshiftDemo(VideoCapture& cap) {
 			rectangle(image, selection_autom, Scalar(255, 255, 0), 3, CV_AA);
 		}
 
-		imshow("lost-mouse preview", image);
+		imshow("lost-mouse podglad", image);
 
 		char c = (char) waitKey(10);
 		if (c == 27)
@@ -236,6 +236,7 @@ int camshiftDemo(VideoCapture& cap) {
 			break;
 		case 'c':
 			trackObject = 0;
+			frame_counter = 0;
 			histimg = Scalar::all(0);
 			break;
 		case ' ':
@@ -250,18 +251,17 @@ int camshiftDemo(VideoCapture& cap) {
 }
 
 void help() {
-	cout << "\nHot keys: \n"
-			"\t'ESC' - quit the program\n"
-			"\t'c' - stop the tracking\n"
-			"\t'b' - switch to/from backprojection view\n"
-			"\t' ' - pause video\n"
-			"To initialize tracking, select the object with mouse\n\n";
+	cout << "\nskroty klawiszowe: \n"
+			"\t'ESC' - wyjscie z programu\n"
+			"\t'c' - resetowanie zaznaczonego obszaru, zaprzestanie sledzenia\n"
+			"\t'b' - podglad widoku wstecznej projekcji histogramu\n"
+			"\t' ' - stopklatka\n";
 }
 
 void help_arg() {
-	cout << "\narguments:\n"
-			"arg1 - video file path, or 'null' if capturing from camera, default:null\n"
-			"arg2 - automatic hand selection: {true,false}, default:true\n";
+	cout << "\nargumenty:\n"
+			"arg1 - sciezka do pliku wideo, jesli 'null' to brany jest obraz z kamery, domyslnie:'null'\n"
+			"arg2 - automatyczne zaznaczanie dloni: {true,false}, domyslnie:true\n";
 }
 
 int main(int argc, const char** argv) {
@@ -274,7 +274,7 @@ int main(int argc, const char** argv) {
 
 	screenWidth = GetSystemMetrics(SM_CXSCREEN);
 	screenHeight = GetSystemMetrics(SM_CYSCREEN);
-	cout << screenWidth << "," << screenHeight << " - resolution of the screen [px]" << endl;
+	cout << screenWidth << "," << screenHeight << " - wymiary ekranu [piksele]" << endl;
 
 	VideoCapture vcap;
 	string str_null("null");
@@ -283,21 +283,21 @@ int main(int argc, const char** argv) {
 		vcap.open(0);
 		if (!vcap.isOpened()) {
 			help();
-			cout << "error - could not initialize capturing from camera\n";
+			cout << "blad - nie mozna odczytac obrazu z kamery\n";
 			return -1;
 		}
-		cout << "capture from: camera video" << endl;
+		cout << "zrodlo obrazu: kamera wideo" << endl;
 	} else {
 		//wczytywanie z pliku
 		string filename = (LPCTSTR) argv[1];
 		vcap = VideoCapture(filename);
-		cout << "capture from file: " << argv[1] << endl;
+		cout << "zrodlo obrazu: " << argv[1] << endl;
 	}
 
 	string str_select("true");
 	//automatyczne zaznaczanie dłoni w srodku poczatkowej klatki video
 	select_mouse_autom = argc < 3 || str_select.compare(argv[2]) == 0;
-	cout << "automatic hand selection: " << (select_mouse_autom ? "true" : "false") << endl;
+	cout << "automatyczne zaznaczanie dłoni: " << (select_mouse_autom ? "true" : "false") << endl;
 
 	help();
 
@@ -305,7 +305,7 @@ int main(int argc, const char** argv) {
 	camshiftDemo(vcap);
 	clock_t after = clock();
 
-	cout << endl << after - before << " - number of clock ticks elapsed during hand function" << endl;
+	cout << endl << after - before << " - czas sledzenia dloni [ms]" << endl;
 
 	//test kliniecie prawym przyciskiem myszy
 	//SetCursorPos(300, 300);
