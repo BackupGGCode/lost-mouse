@@ -97,19 +97,12 @@ int camshiftDemo(int argc, const char** argv) {
 	//pobiera parametry filmu
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
 	int movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
-
+	bool stopE=0;
 	Rect trackWindow;
 	RotatedRect trackBox;
 	int hsize = 16;
 	float hranges[] = { 0, 180 };
 	const float* phranges = hranges;
-	CommandLineParser parser(argc, argv, keys);
-
-	/*	cap.open(camNum);
-	 if (!cap.isOpened()) {
-	 cout << "***Could not initialize capturing...***\n";
-	 return -1;
-	 }*/
 
 	namedWindow("Histogram", 0);
 	namedWindow("CamShift Demo", 0);
@@ -197,24 +190,25 @@ int camshiftDemo(int argc, const char** argv) {
 				//Finds an object center, size, and orientation.
 				RotatedRect trackBox = CamShift(backproj, trackWindow,
 						TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1));
-
+				if(trackWindow.x==0){stopE=1;}
+				else {stopE=0;}
 				if (trackWindow.area() <= 1) {
 					int cols = backproj.cols, rows = backproj.rows, r = (MIN(cols, rows) + 5) / 6;
 					trackWindow = Rect(trackWindow.x - r, trackWindow.y - r, trackWindow.x + r,
 							trackWindow.y + r) & Rect(0, 0, cols, rows);
 				}
 
-				//jeli widok prawdopodobieństwa
+				//jeli widok prawdopodobieÅ„stwa
 				if (backprojMode) {
 					//grey scale of matching to histogram
 					cvtColor(backproj, image, CV_GRAY2BGR);
 				}
-
+				if(!stopE)
 				//paint ellipse around the object
 				ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
 
 				//ruch kursorem myszy
-				movemouse(trackBox, movie_width, movie_height);
+			//	movemouse(trackBox, movie_width, movie_height);
 			}
 		} else if (trackObject < 0)
 			paused = false;
@@ -273,8 +267,9 @@ int main(int argc, const char** argv) {
 	cout << clock() << " - number of clock ticks elapsed since the program was launched" << endl;
 
 	/* test kliniecie prawym przyciskiem myszy
-	 * SetCursorPos(300, 300);
-	mouseClick(1);
-	*/
+	 *SetCursorPos(300, 300);
+	mouseClick(1);*/
+
 	return 0;
 }
+
