@@ -18,9 +18,9 @@ Mat image;
 Point origin;
 Rect selection;
 
-int vmin = 10;
+int vmin = 1;
 int vmax = 256;
-int smin = 30;
+int smin = 1;
 
 //plik video do wczytania
 string filename = "black_bg_easy.avi";
@@ -156,7 +156,7 @@ int camshiftDemo(int argc, const char** argv) {
 
 				//median filter
 				median_ia.create(hue.size(), hue.depth());
-				medianBlur(binary_ia, median_ia, 11);
+				medianBlur(binary_ia, median_ia, 3);
 
 				hue = median_ia;
 
@@ -213,6 +213,9 @@ int camshiftDemo(int argc, const char** argv) {
 				//paint ellipse around the object
 				ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
 
+				//rysuje prostokąt otaczajacy wykryty obszar
+				rectangle(image, trackBox.boundingRect(), Scalar(0, 255, 255), 3, CV_AA);
+
 				//ruch kursorem myszy
 				movemouse(trackBox, movie_width, movie_height);
 			}
@@ -263,13 +266,8 @@ int main(int argc, const char** argv) {
 	screenHeight = GetSystemMetrics(SM_CYSCREEN);
 	cout << screenWidth << "," << screenHeight << " - resolution of the screen [px]" << endl;
 
-	time_t before, after;
-
-	before = time(NULL);
 	camshiftDemo(argc, argv);
-	after = time(NULL);
 
-	cout << difftime(after, before) << " - duration of the program [s] " << endl;
 	cout << clock() << " - number of clock ticks elapsed since the program was launched" << endl;
 
 	/* test kliniecie prawym przyciskiem myszy
