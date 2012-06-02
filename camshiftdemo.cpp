@@ -141,7 +141,7 @@ int camshiftDemo(int argc, const char** argv) {
 
 		frame.copyTo(image);
 		//rysowanie prostokata od selekcji
-		rectangle(image, selection, Scalar(255, 255, 0), 3, CV_AA);
+		if(!select_mouse){rectangle(image, selection, Scalar(255, 255, 0), 3, CV_AA);}
 		if (!paused) {
 			//color space convertion:bgr->hsv
 			cvtColor(image, hsv, CV_BGR2HSV);
@@ -289,4 +289,3 @@ int main(int argc, const char** argv) {
 
 	return 0;
 }
-
