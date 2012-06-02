@@ -80,7 +80,7 @@ void onMouse(int event, int x, int y, int, void*) {
 	}
 }
 
-int camshiftDemo(VideoCapture& cap) {
+int lost_mouse(VideoCapture& cap) {
 	//pobiera parametry filmu
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
 	int movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
@@ -100,18 +100,17 @@ int camshiftDemo(VideoCapture& cap) {
 
 	Rect selection_autom;
 	if (select_mouse_autom) {
-		selection_autom.x = movie_width *0.45;
-		selection_autom.y = movie_height *0.4;
-		selection_autom.width = movie_width *0.1;
-		selection_autom.height = movie_height *0.2;
-	} else{
+		selection_autom.x = movie_width * 0.45;
+		selection_autom.y = movie_height * 0.4;
+		selection_autom.width = movie_width * 0.1;
+		selection_autom.height = movie_height * 0.2;
+	} else {
 		setMouseCallback("lost-mouse podglad", onMouse, 0);
 	}
 
-	Mat frame, hsv, hue, mask, hist, median_ia, binary_ia, backproj;
+	Mat frame, hsv_ia, hue_ia, median_ia, binary_ia, luminancy_ia, mask, hist, backproj;
 	Mat histimg = Mat::zeros(200, 320, CV_8UC3);
 	bool paused = false;
-
 
 	for (int frame_counter = 0;; frame_counter++) {
 		if (paused) {
@@ -131,35 +130,34 @@ int camshiftDemo(VideoCapture& cap) {
 
 		if (!paused) {
 			//zmiana przestrzeni barwnej:bgr->hsv
-			cvtColor(image, hsv, CV_BGR2HSV);
+			cvtColor(image, hsv_ia, CV_BGR2HSV);
 
 			if (trackObject) {
 				//TODO: wtf is vmin,vmax,smin
 				int vmin = 10, vmax = 256, smin = 30;
 
 				//stwierdzenie czy dany element tablicy ma wartosc pomiedzy min i max
-				inRange(hsv, Scalar(0, smin, MIN(vmin,vmax)), Scalar(180, 256, MAX(vmin, vmax)), mask);
+				inRange(hsv_ia, Scalar(0, smin, MIN(vmin,vmax)), Scalar(180, 256, MAX(vmin, vmax)),
+						mask);
 				int ch[] = { 0, 0 };
 
-				//tworzenie pustego obrazu
-				hue.create(hsv.size(), hsv.depth());
-
 				//skopiowanie luminancji (Hue) z przestrzeni barw HSV
-				mixChannels(&hsv, 1, &hue, 1, ch, 1);
+				hue_ia.create(hsv_ia.size(), hsv_ia.depth());
+				mixChannels(&hsv_ia, 1, &hue_ia, 1, ch, 1);
 
 				//binaryzacja
-				binary_ia.create(hue.size(), hue.depth());
-				threshold(hue, binary_ia, 32.0, 256.0, THRESH_BINARY);
+				binary_ia.create(hue_ia.size(), hue_ia.depth());
+				threshold(hue_ia, binary_ia, 32.0, 256.0, THRESH_BINARY);
 
 				//filtr medianowy
-				median_ia.create(hue.size(), hue.depth());
+				median_ia.create(binary_ia.size(), binary_ia.depth());
 				medianBlur(binary_ia, median_ia, 3);
 
-				hue = median_ia;
+				luminancy_ia = median_ia;
 
 				if (trackObject < 0) {
 					//tworzenie maski dla ROI
-					Mat roi(hue, selection), maskroi(mask, selection);
+					Mat roi(luminancy_ia, selection), maskroi(mask, selection);
 
 					//obliczanie histogramu
 					calcHist(&roi, 1, 0, maskroi, hist, 1, &hsize, &phranges);
@@ -172,17 +170,15 @@ int camshiftDemo(VideoCapture& cap) {
 				}
 
 				//wsteczna propagacja histogramu -> czy kolor pasuje zaznaczonemu obszarowi
-				calcBackProject(&hue, 1, 0, hist, backproj, &phranges);
+				calcBackProject(&luminancy_ia, 1, 0, hist, backproj, &phranges);
 				backproj &= mask;
 
-				//znajduje rodek, wymiary i orientacje obiektu
+				//znajduje srodek, wymiary i orientacje obiektu
 				RotatedRect trackBox = CamShift(backproj, trackWindow,
 						TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1));
-				if (trackWindow.x == 0) {
-					stopE = 1;
-				} else {
-					stopE = 0;
-				}
+
+				stopE = trackWindow.x == 0 ? 1 : 0;
+
 				if (trackWindow.area() <= 1) {
 					int cols = backproj.cols, rows = backproj.rows, r = (MIN(cols, rows) + 5) / 6;
 					trackWindow = Rect(trackWindow.x - r, trackWindow.y - r, trackWindow.x + r,
@@ -191,7 +187,7 @@ int camshiftDemo(VideoCapture& cap) {
 
 				//jeli widok prawdopodobienstwa
 				if (backprojMode) {
-					//grey scale of matching to histogram
+					//widok prawdopodobienstwa jak bardzo dany kolor pasuje do zaznaczoneg obszaru
 					cvtColor(backproj, image, CV_GRAY2BGR);
 				}
 
@@ -211,7 +207,7 @@ int camshiftDemo(VideoCapture& cap) {
 				//ruch kursorem myszy
 				//movemouse(trackBox, movie_width, movie_height);
 			}
-		} else if (trackObject < 0){
+		} else if (trackObject < 0) {
 			paused = false;
 		}
 
@@ -259,13 +255,14 @@ void help() {
 }
 
 void help_arg() {
-	cout << "\nargumenty:\n"
-			"arg1 - sciezka do pliku wideo, jesli 'null' to brany jest obraz z kamery, domyslnie:'null'\n"
-			"arg2 - automatyczne zaznaczanie dloni: {true,false}, domyslnie:true\n";
+	cout
+			<< "\nargumenty:\n"
+					"arg1 - sciezka do pliku wideo, jesli 'null' to brany jest obraz z kamery, domyslnie:'null'\n"
+					"arg2 - automatyczne zaznaczanie dloni: {true,false}, domyslnie:true\n";
 }
 
 int main(int argc, const char** argv) {
-
+	//mozliwe arguemnty programu
 	string str_help("--help");
 	if (argc == 2 && str_help.compare(argv[1]) == 0) {
 		help_arg();
@@ -276,33 +273,34 @@ int main(int argc, const char** argv) {
 	screenHeight = GetSystemMetrics(SM_CYSCREEN);
 	cout << screenWidth << "," << screenHeight << " - wymiary ekranu [piksele]" << endl;
 
+	//wczytanie streamu video
 	VideoCapture vcap;
 	string str_null("null");
 	if (argc < 2 || str_null.compare(argv[1]) == 0) {
 		//wczytywanie z kamery
 		vcap.open(0);
-		if (!vcap.isOpened()) {
-			help();
-			cout << "blad - nie mozna odczytac obrazu z kamery\n";
-			return -1;
-		}
 		cout << "zrodlo obrazu: kamera wideo" << endl;
 	} else {
 		//wczytywanie z pliku
 		string filename = (LPCTSTR) argv[1];
-		vcap = VideoCapture(filename);
+		vcap.open(filename);
 		cout << "zrodlo obrazu: " << argv[1] << endl;
 	}
+	if (!vcap.isOpened()) {
+		//obsluga blednego pliku video
+		cout << "blad - nie mozna odczytac obrazu z podanego zrodla\n";
+		return -1;
+	}
 
-	string str_select("true");
 	//automatyczne zaznaczanie dłoni w srodku poczatkowej klatki video
+	string str_select("true");
 	select_mouse_autom = argc < 3 || str_select.compare(argv[2]) == 0;
 	cout << "automatyczne zaznaczanie dłoni: " << (select_mouse_autom ? "true" : "false") << endl;
 
 	help();
 
 	clock_t before = clock();
-	camshiftDemo(vcap);
+	lost_mouse(vcap);
 	clock_t after = clock();
 
 	cout << endl << after - before << " - czas sledzenia dloni [ms]" << endl;
