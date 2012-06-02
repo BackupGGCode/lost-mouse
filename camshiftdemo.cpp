@@ -18,12 +18,10 @@ Mat image;
 Point origin;
 Rect selection;
 
-int vmin = 1;
+int vmin = 10;
 int vmax = 256;
-int smin = 1;
+int smin = 30;
 
-//plik video do wczytania
-string filename = "black_bg_easy.avi";
 int screenWidth, screenHeight;
 
 void movemouse(RotatedRect trackBox, int wight, int height) {
@@ -37,23 +35,24 @@ void movemouse(RotatedRect trackBox, int wight, int height) {
 }
 
 //Klik myszki 1- prawy 0-lewy
-void mouseClick(bool side)
-{
-	INPUT    Input={0};
+void mouseClick(bool side) {
+	INPUT Input = { 0 };
 
-	Input.type= INPUT_MOUSE;
+	Input.type = INPUT_MOUSE;
 
-	if(side)
-		{Input.mi.dwFlags  = MOUSEEVENTF_RIGHTDOWN;}
-	else Input.mi.dwFlags  = MOUSEEVENTF_LEFTDOWN;
-	SendInput( 1, &Input, sizeof(INPUT) );
+	if (side) {
+		Input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+	} else
+		Input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+	SendInput(1, &Input, sizeof(INPUT));
 
 	ZeroMemory(&Input,sizeof(INPUT));
-	Input.type= INPUT_MOUSE;
-	if(side)
-		{Input.mi.dwFlags  = MOUSEEVENTF_RIGHTUP;}
-	else Input.mi.dwFlags  = MOUSEEVENTF_LEFTUP;
-	SendInput( 1, &Input, sizeof(INPUT) );
+	Input.type = INPUT_MOUSE;
+	if (side) {
+		Input.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+	} else
+		Input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+	SendInput(1, &Input, sizeof(INPUT));
 }
 
 void onMouse(int event, int x, int y, int, void*) {
@@ -79,28 +78,15 @@ void onMouse(int event, int x, int y, int, void*) {
 	}
 }
 
-void help() {
-	cout << "\n\nHot keys: \n"
-			"\t'ESC' - quit the program\n"
-			"\t'c' - stop the tracking\n"
-			"\t'b' - switch to/from backprojection view\n"
-			"\t'h' - show/hide object histogram\n"
-			"\t' ' - pause video\n"
-			"To initialize tracking, select the object with mouse\n";
-}
-
 const char* keys = { "{1|  | 0 | camera number}" };
 
-int camshiftDemo(int argc, const char** argv) {
-	//konstruktor VideoCapture, jako argument nazwa pliku wideo
-	VideoCapture cap(filename);
+int camshiftDemo(VideoCapture& cap, bool select) {
 	//pobiera parametry filmu
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
 	int movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+	cout << "movie_width: " << movie_width << ", movie_height: " << movie_height << endl;
 
-	cout<<"movie_width: "<<movie_width<<", movie_height: "<<movie_height<<endl;
-
-	bool stopE=0;
+	bool stopE = 0;
 	Rect trackWindow;
 	RotatedRect trackBox;
 	int hsize = 16;
@@ -193,8 +179,11 @@ int camshiftDemo(int argc, const char** argv) {
 				//Finds an object center, size, and orientation.
 				RotatedRect trackBox = CamShift(backproj, trackWindow,
 						TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1));
-				if(trackWindow.x==0){stopE=1;}
-				else {stopE=0;}
+				if (trackWindow.x == 0) {
+					stopE = 1;
+				} else {
+					stopE = 0;
+				}
 				if (trackWindow.area() <= 1) {
 					int cols = backproj.cols, rows = backproj.rows, r = (MIN(cols, rows) + 5) / 6;
 					trackWindow = Rect(trackWindow.x - r, trackWindow.y - r, trackWindow.x + r,
@@ -207,12 +196,17 @@ int camshiftDemo(int argc, const char** argv) {
 					cvtColor(backproj, image, CV_GRAY2BGR);
 				}
 
-				if(!stopE){
+				if (!stopE) {
 					//paint ellipse around the object
 					ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
 
 					//rysuje prostokąt otaczajacy wykryty obszar
 					rectangle(image, trackBox.boundingRect(), Scalar(0, 255, 255), 3, CV_AA);
+
+					Point2f vertices[4];
+					trackBox.points(vertices);
+					for (int i = 0; i < 4; i++)
+						line(image, vertices[i], vertices[(i + 1) % 4], Scalar(0, 255, 0), 2);
 				}
 
 				//ruch kursorem myszy
@@ -258,20 +252,68 @@ int camshiftDemo(int argc, const char** argv) {
 	return 0;
 }
 
+void help() {
+	cout << "\nHot keys: \n"
+			"\t'ESC' - quit the program\n"
+			"\t'c' - stop the tracking\n"
+			"\t'b' - switch to/from backprojection view\n"
+			"\t'h' - show/hide object histogram\n"
+			"\t' ' - pause video\n"
+			"To initialize tracking, select the object with mouse\n\n";
+}
+
+void help_arg() {
+	cout << "\narguments:\n"
+			"arg1 - video file path, or 'null' if capturing from camera, default:null\n"
+			"arg2 - automatic hand selection: {true,false}, default:true\n";
+}
+
 int main(int argc, const char** argv) {
-	help();
+
+	string str_help("--help");
+	if (argc == 2 && str_help.compare(argv[1]) == 0) {
+		help_arg();
+		return 0;
+	}
 
 	screenWidth = GetSystemMetrics(SM_CXSCREEN);
 	screenHeight = GetSystemMetrics(SM_CYSCREEN);
 	cout << screenWidth << "," << screenHeight << " - resolution of the screen [px]" << endl;
 
-	camshiftDemo(argc, argv);
+	VideoCapture vcap;
+	string str_null("null");
+	if (argc < 2 || str_null.compare(argv[1]) == 0) {
+		//wczytywanie z kamery
+		vcap.open(0);
+		if (!vcap.isOpened()) {
+			help();
+			cout << "error - could not initialize capturing from camera\n";
+			return -1;
+		}
+		cout << "capture from: camera video" << endl;
+	} else {
+		//wczytywanie z pliku
+		string filename = (LPCTSTR) argv[1];
+		vcap = VideoCapture(filename);
+		cout << "capture from file: " << argv[1] << endl;
+	}
 
-	cout << clock() << " - number of clock ticks elapsed since the program was launched" << endl;
+	string str_select("true");
+	//automatyczne zaznaczanie dłoni w srodku poczatkowej klatki video
+	bool select = argc < 3 || str_select.compare(argv[2]) == 0;
+	cout << "automatic hand selection: " << (select ? "true" : "false") << endl;
 
-	/* test kliniecie prawym przyciskiem myszy
-	 *SetCursorPos(300, 300);
-	mouseClick(1);*/
+	help();
+
+	clock_t before = clock();
+	camshiftDemo(vcap, select);
+	clock_t after = clock();
+
+	cout << endl << after - before << " - number of clock ticks elapsed during hand function" << endl;
+
+	//test kliniecie prawym przyciskiem myszy
+	//SetCursorPos(300, 300);
+	//mouseClick(1);
 
 	return 0;
 }
