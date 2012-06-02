@@ -97,6 +97,9 @@ int camshiftDemo(int argc, const char** argv) {
 	//pobiera parametry filmu
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
 	int movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+
+	cout<<"movie_width: "<<movie_width<<", movie_height: "<<movie_height<<endl;
+
 	bool stopE=0;
 	Rect trackWindow;
 	RotatedRect trackBox;
@@ -198,20 +201,22 @@ int camshiftDemo(int argc, const char** argv) {
 							trackWindow.y + r) & Rect(0, 0, cols, rows);
 				}
 
-				//jeli widok prawdopodobieÅ„stwa
+				//jeli widok prawdopodobieństwa
 				if (backprojMode) {
 					//grey scale of matching to histogram
 					cvtColor(backproj, image, CV_GRAY2BGR);
 				}
-				if(!stopE)
-				//paint ellipse around the object
-				ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
 
-				//rysuje prostokąt otaczajacy wykryty obszar
-				rectangle(image, trackBox.boundingRect(), Scalar(0, 255, 255), 3, CV_AA);
+				if(!stopE){
+					//paint ellipse around the object
+					ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
+
+					//rysuje prostokąt otaczajacy wykryty obszar
+					rectangle(image, trackBox.boundingRect(), Scalar(0, 255, 255), 3, CV_AA);
+				}
 
 				//ruch kursorem myszy
-			//	movemouse(trackBox, movie_width, movie_height);
+				//movemouse(trackBox, movie_width, movie_height);
 			}
 		} else if (trackObject < 0)
 			paused = false;
