@@ -17,6 +17,8 @@ int trackObject = 0;
 Mat image;
 Point origin;
 Rect selection;
+//1-select myszka, 0-select automatycznie ze srodka filmu
+bool select_mouse=0;
 
 int vmin = 1;
 int vmax = 256;
@@ -27,8 +29,12 @@ string filename = "black_bg_easy.avi";
 int screenWidth, screenHeight;
 
 void movemouse(RotatedRect trackBox, int wight, int height) {
+
 	Point2f centr = trackBox.center;
 	//normalizacja 100% video to 100% ekranu
+	/*Size2f size=trackBox.size;
+	cout<<"wysokosc "<<size.height<<", szerokosc"<<size.width<<endl;
+	cout<<size.height/size.width<<endl;*/
 	int iks = (int) centr.x * (screenWidth / wight);
 	int igrek = (int) centr.y * (screenHeight / height);
 	//ustawiamy kursor (btw 0,0 to lewy gorny rog ekranu)
@@ -109,7 +115,14 @@ int camshiftDemo(int argc, const char** argv) {
 
 	namedWindow("Histogram", 0);
 	namedWindow("CamShift Demo", 0);
-	setMouseCallback("CamShift Demo", onMouse, 0);
+	if(select_mouse){setMouseCallback("CamShift Demo", onMouse, 0);}
+	else{
+	selection.x=(movie_width*0.9)/2;
+	selection.y=(movie_height*0.7)/2;
+	selection.width=100;
+	selection.height=200;
+	trackObject=-1;}
+
 	createTrackbar("Vmin", "CamShift Demo", &vmin, 256, 0);
 	createTrackbar("Vmax", "CamShift Demo", &vmax, 256, 0);
 	createTrackbar("Smin", "CamShift Demo", &smin, 256, 0);
@@ -127,7 +140,8 @@ int camshiftDemo(int argc, const char** argv) {
 		}
 
 		frame.copyTo(image);
-
+		//rysowanie prostokata od selekcji
+		rectangle(image, selection, Scalar(255, 255, 0), 3, CV_AA);
 		if (!paused) {
 			//color space convertion:bgr->hsv
 			cvtColor(image, hsv, CV_BGR2HSV);
@@ -201,7 +215,7 @@ int camshiftDemo(int argc, const char** argv) {
 							trackWindow.y + r) & Rect(0, 0, cols, rows);
 				}
 
-				//jeli widok prawdopodobieństwa
+				//jeli widok prawdopodobienstwa
 				if (backprojMode) {
 					//grey scale of matching to histogram
 					cvtColor(backproj, image, CV_GRAY2BGR);
@@ -211,7 +225,7 @@ int camshiftDemo(int argc, const char** argv) {
 					//paint ellipse around the object
 					ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
 
-					//rysuje prostokąt otaczajacy wykryty obszar
+					//rysuje prostokat otaczajacy wykryty obszar
 					rectangle(image, trackBox.boundingRect(), Scalar(0, 255, 255), 3, CV_AA);
 				}
 
