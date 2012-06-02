@@ -3,16 +3,19 @@
 #include "opencv2/highgui/highgui.hpp"
 
 #include <iostream>
-#include <ctype.h>
 #include <windows.h>
+#include <ctype.h>
 #include <time.h>
 
 using namespace cv;
 using namespace std;
 
+//pokazywanie prawdopodobienstwa wstecznej propagacji histogramu
 bool backprojMode = false;
+//stan do rysowania zaznaczanego obszaru
 bool selectObject = false;
 bool showHist = true;
+//stan sledzonego obiektu
 int trackObject = 0;
 Mat image;
 Point origin;
@@ -23,7 +26,6 @@ bool select_mouse_autom = 0;
 int screenWidth, screenHeight;
 
 void movemouse(RotatedRect trackBox, int wight, int height) {
-
 	Point2f centr = trackBox.center;
 	//normalizacja 100% video to 100% ekranu
 	/*Size2f size=trackBox.size;
@@ -81,24 +83,33 @@ void onMouse(int event, int x, int y, int, void*) {
 }
 
 int lost_mouse(VideoCapture& cap) {
-	//pobiera parametry filmu
-	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
-	int movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+	//obszar do automatycznego zaznaczenia dłoni
+	Rect selection_autom;
+	Rect trackWindow;
+	//znalezioy wynik camshift'a
+	RotatedRect trackBox;
+	//przechowywuja klatke
+	Mat frame, hsv_ia, hue_ia, median_ia, binary_ia, luminancy_ia, mask, backproj;
+	//do obsługi histogramu
+	Mat hist, histimg = Mat::zeros(200, 320, CV_8UC3);
+	int hsize = 16;
+	float hranges[] = { 0, 180 };
+	const float* phranges = hranges;
+	//min i max wartosci hsv do maski (na podstawie której okreslany jest ROI)
+	Scalar hsv_min(0, 30, MIN(10,256)), hsv_max(180, 256, MAX(10, 256));
+
+	bool paused = false;
+
+	namedWindow("lost-mouse podglad");
+
+	//pobiera parametry klatki video
+	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH), movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+	//naprawiony fps
 	int select_mouse_autom_timeout = (cap.get(CV_CAP_PROP_FPS) ? cap.get(CV_CAP_PROP_FPS) : 30) * 3.5;
 
 	cout << movie_width << "," << movie_height << " - wymiary obrazu szerokosc,wysokosc [px]" << endl;
 	cout << cap.get(CV_CAP_PROP_FPS) << " - liczba klatek na sekunde (przy kamerze = 30fps)" << endl;
 
-	bool stopE = 0;
-	Rect trackWindow;
-	RotatedRect trackBox;
-	int hsize = 16;
-	float hranges[] = { 0, 180 };
-	const float* phranges = hranges;
-
-	namedWindow("lost-mouse podglad");
-
-	Rect selection_autom;
 	if (select_mouse_autom) {
 		selection_autom.x = movie_width * 0.45;
 		selection_autom.y = movie_height * 0.4;
@@ -107,10 +118,6 @@ int lost_mouse(VideoCapture& cap) {
 	} else {
 		setMouseCallback("lost-mouse podglad", onMouse, 0);
 	}
-
-	Mat frame, hsv_ia, hue_ia, median_ia, binary_ia, luminancy_ia, mask, hist, backproj;
-	Mat histimg = Mat::zeros(200, 320, CV_8UC3);
-	bool paused = false;
 
 	for (int frame_counter = 0;; frame_counter++) {
 		if (paused) {
@@ -133,12 +140,8 @@ int lost_mouse(VideoCapture& cap) {
 			cvtColor(image, hsv_ia, CV_BGR2HSV);
 
 			if (trackObject) {
-				//TODO: wtf is vmin,vmax,smin
-				int vmin = 10, vmax = 256, smin = 30;
-
 				//stwierdzenie czy dany element tablicy ma wartosc pomiedzy min i max
-				inRange(hsv_ia, Scalar(0, smin, MIN(vmin,vmax)), Scalar(180, 256, MAX(vmin, vmax)),
-						mask);
+				inRange(hsv_ia, hsv_min, hsv_max, mask);
 				int ch[] = { 0, 0 };
 
 				//skopiowanie luminancji (Hue) z przestrzeni barw HSV
@@ -174,34 +177,13 @@ int lost_mouse(VideoCapture& cap) {
 				backproj &= mask;
 
 				//znajduje srodek, wymiary i orientacje obiektu
-				RotatedRect trackBox = CamShift(backproj, trackWindow,
+				trackBox = CamShift(backproj, trackWindow,
 						TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1));
-
-				stopE = trackWindow.x == 0 ? 1 : 0;
 
 				if (trackWindow.area() <= 1) {
 					int cols = backproj.cols, rows = backproj.rows, r = (MIN(cols, rows) + 5) / 6;
 					trackWindow = Rect(trackWindow.x - r, trackWindow.y - r, trackWindow.x + r,
 							trackWindow.y + r) & Rect(0, 0, cols, rows);
-				}
-
-				//jeli widok prawdopodobienstwa
-				if (backprojMode) {
-					//widok prawdopodobienstwa jak bardzo dany kolor pasuje do zaznaczoneg obszaru
-					cvtColor(backproj, image, CV_GRAY2BGR);
-				}
-
-				if (!stopE) {
-					//rysuje eklipse
-					ellipse(image, trackBox, Scalar(0, 0, 255), 3, CV_AA);
-
-					//rysuje prostokat otaczajacy wykryty obszar
-					rectangle(image, trackBox.boundingRect(), Scalar(0, 255, 255), 3, CV_AA);
-
-					Point2f vertices[4];
-					trackBox.points(vertices);
-					for (int i = 0; i < 4; i++)
-						line(image, vertices[i], vertices[(i + 1) % 4], Scalar(0, 255, 0), 2);
 				}
 
 				//ruch kursorem myszy
@@ -211,9 +193,32 @@ int lost_mouse(VideoCapture& cap) {
 			paused = false;
 		}
 
+		//widok prawdopodobienstwa jak bardzo dany kolor pasuje do zaznaczoneg obszaru
+		if (paused && backprojMode && backproj.rows != 0) {
+			cvtColor(backproj, image, CV_GRAY2BGR);
+		}
+
 		if (selectObject && selection.width > 0 && selection.height > 0) {
 			Mat roi(image, selection);
 			bitwise_not(roi, roi);
+		}
+
+		//rysowanie wykrytego obszaru tylko jeli wykryło obszar x!=0 || y!0=0
+		if (trackWindow.x || trackWindow.y) {
+			//rysuje prostokat otaczajacy wykryty obszar
+			rectangle(image, trackBox.boundingRect(), Scalar(0, 255, 255), 1, CV_AA);
+
+			//rysuje prostokat dopasowany do obszaru
+			Point2f vertices[4];
+			trackBox.points(vertices);
+			for (int i = 0; i < 4; i++)
+				line(image, vertices[i], vertices[(i + 1) % 4], Scalar(0, 255, 0), 2);
+
+			//rysuje eklipse
+			ellipse(image, trackBox, Scalar(0, 0, 255), 2, CV_AA);
+
+			//rysuje srodek znalezionego obszaru
+			circle(image, trackBox.center, 2, Scalar(0, 0, 255), 3);
 		}
 
 		//rysowanie prostokata od selekcji
