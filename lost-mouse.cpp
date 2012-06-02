@@ -89,12 +89,16 @@ int lost_mouse(VideoCapture& cap) {
 	//znalezioy wynik camshift'a
 	RotatedRect trackBox;
 	//przechowywuja klatke
-	Mat frame, hsv_ia, hue_ia, median_ia, binary_ia, luminancy_ia, mask, backproj;
+	Mat frame, hsv_ia, hue_ia, median_ia, binary_ia, luminancy_ia,  backproj;
+	//do masek i do ROI
+	Mat mask,roi, maskroi;
 	//do obsługi histogramu
 	Mat hist, histimg = Mat::zeros(200, 320, CV_8UC3);
 	int hsize = 16;
 	float hranges[] = { 0, 180 };
 	const float* phranges = hranges;
+	//do hue
+	int mix_ch[] = { 0, 0 };
 	//min i max wartosci hsv do maski (na podstawie której okreslany jest ROI)
 	Scalar hsv_min(0, 30, MIN(10,256)), hsv_max(180, 256, MAX(10, 256));
 
@@ -142,11 +146,10 @@ int lost_mouse(VideoCapture& cap) {
 			if (trackObject) {
 				//stwierdzenie czy dany element tablicy ma wartosc pomiedzy min i max
 				inRange(hsv_ia, hsv_min, hsv_max, mask);
-				int ch[] = { 0, 0 };
 
 				//skopiowanie luminancji (Hue) z przestrzeni barw HSV
 				hue_ia.create(hsv_ia.size(), hsv_ia.depth());
-				mixChannels(&hsv_ia, 1, &hue_ia, 1, ch, 1);
+				mixChannels(&hsv_ia, 1, &hue_ia, 1, mix_ch, 1);
 
 				//binaryzacja
 				binary_ia.create(hue_ia.size(), hue_ia.depth());
@@ -160,7 +163,8 @@ int lost_mouse(VideoCapture& cap) {
 
 				if (trackObject < 0) {
 					//tworzenie maski dla ROI
-					Mat roi(luminancy_ia, selection), maskroi(mask, selection);
+					roi = Mat(luminancy_ia, selection);
+					maskroi = Mat(mask, selection);
 
 					//obliczanie histogramu
 					calcHist(&roi, 1, 0, maskroi, hist, 1, &hsize, &phranges);
@@ -194,13 +198,8 @@ int lost_mouse(VideoCapture& cap) {
 		}
 
 		//widok prawdopodobienstwa jak bardzo dany kolor pasuje do zaznaczoneg obszaru
-		if (paused && backprojMode && backproj.rows != 0) {
+		if (backprojMode && backproj.rows != 0) {
 			cvtColor(backproj, image, CV_GRAY2BGR);
-		}
-
-		if (selectObject && selection.width > 0 && selection.height > 0) {
-			Mat roi(image, selection);
-			bitwise_not(roi, roi);
 		}
 
 		//rysowanie wykrytego obszaru tylko jeli wykryło obszar x!=0 || y!0=0
