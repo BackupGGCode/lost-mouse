@@ -17,12 +17,8 @@ int trackObject = 0;
 Mat image;
 Point origin;
 Rect selection;
-//1-select myszka, 0-select automatycznie ze srodka filmu
-bool select_mouse=0;
-
-int vmin = 10;
-int vmax = 256;
-int smin = 30;
+//0-select myszka, 1-select automatycznie ze srodka filmu
+bool select_mouse_autom = 0;
 
 int screenWidth, screenHeight;
 
@@ -31,8 +27,8 @@ void movemouse(RotatedRect trackBox, int wight, int height) {
 	Point2f centr = trackBox.center;
 	//normalizacja 100% video to 100% ekranu
 	/*Size2f size=trackBox.size;
-	cout<<"wysokosc "<<size.height<<", szerokosc"<<size.width<<endl;
-	cout<<size.height/size.width<<endl;*/
+	 cout<<"wysokosc "<<size.height<<", szerokosc"<<size.width<<endl;
+	 cout<<size.height/size.width<<endl;*/
 	int iks = (int) centr.x * (screenWidth / wight);
 	int igrek = (int) centr.y * (screenHeight / height);
 	//ustawiamy kursor (btw 0,0 to lewy gorny rog ekranu)
@@ -84,13 +80,14 @@ void onMouse(int event, int x, int y, int, void*) {
 	}
 }
 
-const char* keys = { "{1|  | 0 | camera number}" };
-
-int camshiftDemo(VideoCapture& cap, bool select) {
+int camshiftDemo(VideoCapture& cap) {
 	//pobiera parametry filmu
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
 	int movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
-	cout << "movie_width: " << movie_width << ", movie_height: " << movie_height << endl;
+	int select_mouse_autom_timeout = (cap.get(CV_CAP_PROP_FPS) ? cap.get(CV_CAP_PROP_FPS) : 30) * 3.5;
+
+	cout << movie_width << "," << movie_height << " - video width,height [px]" << endl;
+	cout << cap.get(CV_CAP_PROP_FPS) << " - viedo fps (in camera 30fps assumed)" << endl;
 
 	bool stopE = 0;
 	Rect trackWindow;
@@ -99,45 +96,49 @@ int camshiftDemo(VideoCapture& cap, bool select) {
 	float hranges[] = { 0, 180 };
 	const float* phranges = hranges;
 
-	namedWindow("Histogram", 0);
-	namedWindow("CamShift Demo", 0);
-	if(select_mouse){setMouseCallback("CamShift Demo", onMouse, 0);}
-	else{
-	selection.x=(movie_width*0.9)/2;
-	selection.y=(movie_height*0.7)/2;
-	selection.width=100;
-	selection.height=200;
-	trackObject=-1;}
+	namedWindow("lost-mouse preview");
 
-	createTrackbar("Vmin", "CamShift Demo", &vmin, 256, 0);
-	createTrackbar("Vmax", "CamShift Demo", &vmax, 256, 0);
-	createTrackbar("Smin", "CamShift Demo", &smin, 256, 0);
+	Rect selection_autom;
+	if (select_mouse_autom) {
+		selection_autom.x = movie_width *0.45;
+		selection_autom.y = movie_height *0.4;
+		selection_autom.width = movie_width *0.1;
+		selection_autom.height = movie_height *0.2;
+	} else{
+		setMouseCallback("lost-mouse preview", onMouse, 0);
+	}
 
-	Mat frame, hsv, hue, mask, hist, histimg = Mat::zeros(200, 320, CV_8UC3), backproj;
+	Mat frame, hsv, hue, mask, hist, median_ia, binary_ia, backproj;
+	Mat histimg = Mat::zeros(200, 320, CV_8UC3);
 	bool paused = false;
 
-	Mat median_ia, binary_ia;
 
-	for (;;) {
-		if (!paused) {
+	for (int frame_counter = 0;; frame_counter++) {
+		if (paused) {
+			frame_counter--;
+		} else {
 			cap >> frame;
 			if (frame.empty())
 				break;
 		}
+		if (select_mouse_autom && frame_counter == select_mouse_autom_timeout) {
+			selection = selection_autom;
+			trackObject = -1;
+			cout << "automated hand selection - done!" << endl;
+		}
 
 		frame.copyTo(image);
-		//rysowanie prostokata od selekcji
-		if(!select_mouse){rectangle(image, selection, Scalar(255, 255, 0), 3, CV_AA);}
+
 		if (!paused) {
 			//color space convertion:bgr->hsv
 			cvtColor(image, hsv, CV_BGR2HSV);
 
 			if (trackObject) {
-				int _vmin = vmin, _vmax = vmax;
+				//TODO: wtf is vmin,vmax,smin
+				int vmin = 10, vmax = 256, smin = 30;
 
 				//if element is between two arrays range
-				inRange(hsv, Scalar(0, smin, MIN(_vmin,_vmax)), Scalar(180, 256, MAX(_vmin, _vmax)),
-						mask);
+				inRange(hsv, Scalar(0, smin, MIN(vmin,vmax)), Scalar(180, 256, MAX(vmin, vmax)), mask);
 				int ch[] = { 0, 0 };
 
 				//creating blank image
@@ -168,22 +169,6 @@ int camshiftDemo(VideoCapture& cap, bool select) {
 
 					trackWindow = selection;
 					trackObject = 1;
-
-					histimg = Scalar::all(0);
-					int binW = histimg.cols / hsize;
-					Mat buf(1, hsize, CV_8UC3);
-					for (int i = 0; i < hsize; i++)
-						buf.at<Vec3b>(i) = Vec3b(saturate_cast<uchar>(i * 180. / hsize), 255, 255);
-					cvtColor(buf, buf, CV_HSV2BGR);
-
-					//rysowanie histogramu
-					for (int i = 0; i < hsize; i++) {
-						int val = saturate_cast<int>(hist.at<float>(i) * histimg.rows / 255);
-						//paint filled rectangle
-						rectangle(histimg, Point(i * binW, histimg.rows),
-								Point((i + 1) * binW, histimg.rows - val), Scalar(buf.at<Vec3b>(i)), -1,
-								8);
-					}
 				}
 
 				//if color match histogram of ROI -> wsteczna propagacja histogramu
@@ -226,16 +211,21 @@ int camshiftDemo(VideoCapture& cap, bool select) {
 				//ruch kursorem myszy
 				//movemouse(trackBox, movie_width, movie_height);
 			}
-		} else if (trackObject < 0)
+		} else if (trackObject < 0){
 			paused = false;
+		}
 
 		if (selectObject && selection.width > 0 && selection.height > 0) {
 			Mat roi(image, selection);
 			bitwise_not(roi, roi);
 		}
 
-		imshow("CamShift Demo", image);
-		imshow("Histogram", histimg);
+		//rysowanie prostokata od selekcji
+		if (select_mouse_autom && frame_counter < select_mouse_autom_timeout) {
+			rectangle(image, selection_autom, Scalar(255, 255, 0), 3, CV_AA);
+		}
+
+		imshow("lost-mouse preview", image);
 
 		char c = (char) waitKey(10);
 		if (c == 27)
@@ -247,13 +237,6 @@ int camshiftDemo(VideoCapture& cap, bool select) {
 		case 'c':
 			trackObject = 0;
 			histimg = Scalar::all(0);
-			break;
-		case 'h':
-			showHist = !showHist;
-			if (!showHist)
-				destroyWindow("Histogram");
-			else
-				namedWindow("Histogram", 1);
 			break;
 		case ' ':
 			paused = !paused;
@@ -271,7 +254,6 @@ void help() {
 			"\t'ESC' - quit the program\n"
 			"\t'c' - stop the tracking\n"
 			"\t'b' - switch to/from backprojection view\n"
-			"\t'h' - show/hide object histogram\n"
 			"\t' ' - pause video\n"
 			"To initialize tracking, select the object with mouse\n\n";
 }
@@ -314,13 +296,13 @@ int main(int argc, const char** argv) {
 
 	string str_select("true");
 	//automatyczne zaznaczanie dłoni w srodku poczatkowej klatki video
-	bool select = argc < 3 || str_select.compare(argv[2]) == 0;
-	cout << "automatic hand selection: " << (select ? "true" : "false") << endl;
+	select_mouse_autom = argc < 3 || str_select.compare(argv[2]) == 0;
+	cout << "automatic hand selection: " << (select_mouse_autom ? "true" : "false") << endl;
 
 	help();
 
 	clock_t before = clock();
-	camshiftDemo(vcap, select);
+	camshiftDemo(vcap);
 	clock_t after = clock();
 
 	cout << endl << after - before << " - number of clock ticks elapsed during hand function" << endl;
