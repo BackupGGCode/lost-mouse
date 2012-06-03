@@ -231,13 +231,15 @@ int lost_mouse(VideoCapture& cap) {
 				//ruch kursorem myszy
 				//movemouse(trackBox, movie_width, movie_height);
 
+				//obliczenie/przypisanie aktualnego stanu
 				sizeP = trackBox.size.height / trackBox.size.width;
-				pozX = trackBox.center.x, pozY = trackBox.center.y;
+				pozX = trackBox.center.x;
+				pozY = trackBox.center.y;
 				//detekcja LPM
-				if ((sizeP > sizeP1 && sizeP1 < sizeP2 && sizeP2 < sizeP3)
+				if ((sizeP > sizeP1 && sizeP1 < sizeP2 && sizeP2 < sizeP3 && sizeP3 < sizeP4)
 						&& trackBox.size.height >= sizeH1) {
 					cout << frame_counter << "zmiana kształtu" << endl;
-					if (pozY1 < pozY2 && pozY2 < pozY3) {
+					if (/*pozY > pozY1 &&*/ pozY1 < pozY2 && pozY2 < pozY3 && pozY3 < pozY4) {
 						cout << "LPM - pionowo - dół" << endl;
 						gesture = 1;
 						gesture_timeout = 3;
@@ -258,13 +260,13 @@ int lost_mouse(VideoCapture& cap) {
 					 gesture_timeout = 3;
 					 }*/
 				}
-				//przepisanie historii wymiarów
+
+				//przepisanie historii pozycji i wymiarów
 				sizeP4 = sizeP3;
 				sizeP3 = sizeP2;
 				sizeP2 = sizeP1;
 				sizeP1 = sizeP;
 				sizeH1 =  trackBox.size.height;
-				//przepisanie historii pozycji
 				pozX4 = pozX3;
 				pozX3 = pozX2;
 				pozX2 = pozX1;
