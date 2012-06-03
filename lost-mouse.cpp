@@ -89,15 +89,15 @@ int lost_mouse(VideoCapture& cap) {
 	//znalezioy wynik camshift'a
 	RotatedRect trackBox;
 	//przechowywuja klatke
-	Mat frame, hsv_ia, hue_ia, median_ia, binary_ia, luminancy_ia,  backproj;
+	Mat hsv_ia, hue_ia, median_ia, binary_ia, luminancy_ia, backproj;
 	//do masek i do ROI
-	Mat mask,roi, maskroi;
+	Mat mask, roi, maskroi;
 	//do obsługi histogramu
 	Mat hist, histimg = Mat::zeros(200, 320, CV_8UC3);
 	int hsize = 16;
 	float hranges[] = { 0, 180 };
 	const float* phranges = hranges;
-	//do hue
+	//do mix channels z hsv -> h
 	int mix_ch[] = { 0, 0 };
 	//min i max wartosci hsv do maski (na podstawie której okreslany jest ROI)
 	Scalar hsv_min(0, 30, MIN(10,256)), hsv_max(180, 256, MAX(10, 256));
@@ -115,11 +115,13 @@ int lost_mouse(VideoCapture& cap) {
 	cout << cap.get(CV_CAP_PROP_FPS) << " - liczba klatek na sekunde (przy kamerze = 30fps)" << endl;
 
 	if (select_mouse_autom) {
+		//wyznaczenie obszaru w ktorym ma sie znalesc reka
 		selection_autom.x = movie_width * 0.45;
 		selection_autom.y = movie_height * 0.4;
 		selection_autom.width = movie_width * 0.1;
 		selection_autom.height = movie_height * 0.2;
 	} else {
+		//podpiecie funkcji do zaznaczania obszaru
 		setMouseCallback("lost-mouse podglad", onMouse, 0);
 	}
 
@@ -127,17 +129,19 @@ int lost_mouse(VideoCapture& cap) {
 		if (paused) {
 			frame_counter--;
 		} else {
-			cap >> frame;
-			if (frame.empty())
+			cap >> image;
+			if (image.empty())
 				break;
 		}
+
+		//pobranie koloru dla dloni po odpowiednim czasie
 		if (select_mouse_autom && frame_counter == select_mouse_autom_timeout) {
 			selection = selection_autom;
 			trackObject = -1;
 			cout << "automatyczne pobieranie koloru dloni - zrobione!" << endl;
 		}
 
-		frame.copyTo(image);
+		//frame.copyTo(image);
 
 		if (!paused) {
 			//zmiana przestrzeni barwnej:bgr->hsv
@@ -151,16 +155,20 @@ int lost_mouse(VideoCapture& cap) {
 				hue_ia.create(hsv_ia.size(), hsv_ia.depth());
 				mixChannels(&hsv_ia, 1, &hue_ia, 1, mix_ch, 1);
 
-				//binaryzacja
-				binary_ia.create(hue_ia.size(), hue_ia.depth());
-				threshold(hue_ia, binary_ia, 32.0, 256.0, THRESH_BINARY);
+				//poprawienie jakosci obrazu
+				{
+					//binaryzacja
+					binary_ia.create(hue_ia.size(), hue_ia.depth());
+					threshold(hue_ia, binary_ia, 32.0, 256.0, THRESH_BINARY);
 
-				//filtr medianowy
-				median_ia.create(binary_ia.size(), binary_ia.depth());
-				medianBlur(binary_ia, median_ia, 3);
+					//filtr medianowy
+					median_ia.create(binary_ia.size(), binary_ia.depth());
+					medianBlur(binary_ia, median_ia, 3);
+				}
 
 				luminancy_ia = median_ia;
 
+				//obliczanie histogramu
 				if (trackObject < 0) {
 					//tworzenie maski dla ROI
 					roi = Mat(luminancy_ia, selection);
@@ -237,6 +245,7 @@ int lost_mouse(VideoCapture& cap) {
 		case 'c':
 			trackObject = 0;
 			frame_counter = 0;
+			backprojMode = false;
 			histimg = Scalar::all(0);
 			break;
 		case ' ':
