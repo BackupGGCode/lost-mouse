@@ -5,7 +5,10 @@
 #include <iostream>
 #include <windows.h>
 #include <ctype.h>
+
+//do testów
 #include <time.h>
+#include <iomanip>
 
 using namespace cv;
 using namespace std;
@@ -83,6 +86,8 @@ void onMouse(int event, int x, int y, int, void*) {
 }
 
 int lost_mouse(VideoCapture& cap) {
+	cout << endl << "w funkcji lost_mouse(VideoCapture&)" << endl;
+
 	//obszar do automatycznego zaznaczenia dłoni
 	Rect selection_autom;
 	Rect trackWindow;
@@ -104,22 +109,34 @@ int lost_mouse(VideoCapture& cap) {
 
 	bool paused = false;
 
-	namedWindow("lost-mouse podglad");
+	//video jest brane z kamery video (opcja jest dostępna tylko dla kamer wideo)
+	bool camera_video = cap.get(CV_CAP_PROP_FPS) == 0;
+	cout << camera_video << " - obraz z kamery wideo" << endl;
+
+	/* numer aktualnego gestu
+	 * 0 - brak gestu
+	 * 1 - LPM
+	 * 2 - PPM
+	 * ujemna - blad
+	 */
+	int gesture = 0;
 
 	//pobiera parametry klatki video
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH), movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
 	//naprawiony fps
-	int select_mouse_autom_timeout = (cap.get(CV_CAP_PROP_FPS) ? cap.get(CV_CAP_PROP_FPS) : 30) * 3.5;
+	int select_mouse_autom_timeout = (camera_video ? 30 : cap.get(CV_CAP_PROP_FPS)) * 3.5;
 
 	cout << movie_width << "," << movie_height << " - wymiary obrazu szerokosc,wysokosc [px]" << endl;
 	cout << cap.get(CV_CAP_PROP_FPS) << " - liczba klatek na sekunde (przy kamerze = 30fps)" << endl;
 
+	//przygotowanie okna i wykrywania/zaznaczania dłoni
+	namedWindow("lost-mouse podglad");
 	if (select_mouse_autom) {
 		//wyznaczenie obszaru w ktorym ma sie znalesc reka
 		selection_autom.x = movie_width * 0.45;
-		selection_autom.y = movie_height * 0.4;
+		selection_autom.y = movie_height * 0.45;
 		selection_autom.width = movie_width * 0.1;
-		selection_autom.height = movie_height * 0.2;
+		selection_autom.height = movie_height * 0.1;
 	} else {
 		//podpiecie funkcji do zaznaczania obszaru
 		setMouseCallback("lost-mouse podglad", onMouse, 0);
@@ -157,11 +174,16 @@ int lost_mouse(VideoCapture& cap) {
 
 				//poprawienie jakosci obrazu
 				{
-					//binaryzacja
-					binary_ia.create(hue_ia.size(), hue_ia.depth());
-					threshold(hue_ia, binary_ia, 32.0, 256.0, THRESH_BINARY);
+					if (camera_video) {
+						//binaryzacja dziala beznadziejnie w normalnych warunkach
+						binary_ia = hue_ia;
+					} else {
+						//binaryzacja - przy dobrze odróżniającym sie tle poprawia obraz
+						binary_ia.create(hue_ia.size(), hue_ia.depth());
+						threshold(hue_ia, binary_ia, 32.0, 256.0, THRESH_BINARY);
+					}
 
-					//filtr medianowy
+					//filtr medianowy - popraiwa szumy
 					median_ia.create(binary_ia.size(), binary_ia.depth());
 					medianBlur(binary_ia, median_ia, 3);
 				}
@@ -211,21 +233,47 @@ int lost_mouse(VideoCapture& cap) {
 		}
 
 		//rysowanie wykrytego obszaru tylko jeli wykryło obszar x!=0 || y!0=0
-		if (trackWindow.x || trackWindow.y) {
+		if (trackBox.center.x && trackBox.center.y) {
+			Scalar color;
+			switch (gesture) {
+			case 0:
+				color = Scalar(0, 255, 0);
+				break;
+			case 1:
+				color = Scalar(231, 0, 162);
+				break;
+			case 2:
+				color = Scalar(232, 21, 255);
+				break;
+			default:
+				color = Scalar(0, 0, 255);
+				break;
+			}
+
 			//rysuje prostokat otaczajacy wykryty obszar
-			rectangle(image, trackBox.boundingRect(), Scalar(0, 255, 255), 1, CV_AA);
+			rectangle(image, trackBox.boundingRect(), color, 1, CV_AA);
 
 			//rysuje prostokat dopasowany do obszaru
 			Point2f vertices[4];
 			trackBox.points(vertices);
 			for (int i = 0; i < 4; i++)
-				line(image, vertices[i], vertices[(i + 1) % 4], Scalar(0, 255, 0), 2);
+				line(image, vertices[i], vertices[(i + 1) % 4], color, 2);
 
 			//rysuje eklipse
-			ellipse(image, trackBox, Scalar(0, 0, 255), 2, CV_AA);
+			ellipse(image, trackBox, color, 3, CV_AA);
 
 			//rysuje srodek znalezionego obszaru
-			circle(image, trackBox.center, 2, Scalar(0, 0, 255), 3);
+			circle(image, trackBox.center, 4, color, -1);
+
+			//opcje debug'erskie
+			if (!paused) {
+				cout << setw(5) << frame_counter << ";" << setw(6) << trackBox.center.x << ";" << setw(6)
+						<< trackBox.center.y << " ; " << setw(9) << trackBox.size.width << ";" << setw(8)
+						<< trackBox.size.height << ";" << endl;
+
+				if (!camera_video)
+					Sleep(100);
+			}
 		}
 
 		//rysowanie prostokata od selekcji
@@ -242,11 +290,19 @@ int lost_mouse(VideoCapture& cap) {
 		case 'b':
 			backprojMode = !backprojMode;
 			break;
+		case ',':
+			cout << frame_counter << " znacznik LLP" << endl;
+			break;
+		case '.':
+			cout << frame_counter << " znacznik PPM" << endl;
+			break;
 		case 'c':
 			trackObject = 0;
 			frame_counter = 0;
 			backprojMode = false;
+			trackBox = RotatedRect();
 			histimg = Scalar::all(0);
+			cout << "reset histogramu" << endl;
 			break;
 		case ' ':
 			paused = !paused;
@@ -268,10 +324,9 @@ void help() {
 }
 
 void help_arg() {
-	cout
-			<< "\nargumenty:\n"
-					"arg1 - sciezka do pliku wideo, jesli 'null' to brany jest obraz z kamery, domyslnie:'null'\n"
-					"arg2 - automatyczne zaznaczanie dloni: {true,false}, domyslnie:true\n";
+	cout << "\nargumenty:\n"
+			"arg1 - sciezka do pliku wideo, jesli 'null' to obraz jest z kamery, domyslnie:'null'\n"
+			"arg2 - automatyczne zaznaczanie dloni: {true,false}, domyslnie:true\n";
 }
 
 int main(int argc, const char** argv) {
