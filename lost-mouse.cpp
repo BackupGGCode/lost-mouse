@@ -137,7 +137,7 @@ int lost_mouse(VideoCapture& cap) {
 	//historia stosunku wysokosci do szerokosci obszaru
 	float rotat4 = 0, rotat3 = 0, rotat2 = 0, rotat1 = 0;
 	//stan obecny obszaru
-	float sizeP, pozX, pozY, rotat, rotatDiff;
+	float sizeP, pozX, pozY, rotat, rotatDiff, rotatDL, rotatDR, pozYD;
 
 	//pobiera parametry klatki video
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH), movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
@@ -247,21 +247,37 @@ int lost_mouse(VideoCapture& cap) {
 				pozY = trackBox.center.y;
 				rotat = normalizeAngle(trackBox.angle);
 				rotatDiff = rotat - rotat4;
+				rotatDL = 0, rotatDR = 0, pozYD = 0;
+
+				pozY4 < pozY3 ? pozYD++ : 0;
+				pozY3 < pozY2 ? pozYD++ : 0;
+				pozY2 < pozY1 ? pozYD++ : 0;
+				pozY1 < pozY ? pozYD++ : 0;
+				rotat4 < rotat3 ? rotatDR++ : 0;
+				rotat3 < rotat2 ? rotatDR++ : 0;
+				rotat2 < rotat1 ? rotatDR++ : 0;
+				rotat1 < rotat ? rotatDR++ : 0;
+				rotat4 > rotat3 ? rotatDL++ : 0;
+				rotat3 > rotat2 ? rotatDL++ : 0;
+				rotat2 > rotat1 ? rotatDL++ : 0;
+				rotat1 > rotat ? rotatDL++ : 0;
 
 				//detekcja LPM
-				if (rotat < rotat1 && rotat1 < rotat2 && rotat2 < rotat3 /*&& rotat3 < rotat4*/
-				&& -45 < rotatDiff && rotatDiff < -5) {
-					cout << "rotacja w LEWO " << rotat - rotat4 << endl;
+				if (2 < pozYD
+						&& ((/*w lewo*/1 < rotatDL && -35 < rotatDiff && rotatDiff < -10)
+								|| (/*w prawo*/1 < rotatDR && 35 > rotatDiff && rotatDiff > 10))) {
+					/*if (gesture_timeout) {
+					 cout << "LPM - podwójny!" << endl;
+					 gesture_timeout = 3;
+					 gesture = 2;
+					 } else {*/
+					cout << "LPM" << endl;
 					gesture = 1;
-					gesture_timeout = 3;
-				}
-				if (rotat > rotat1 && rotat1 > rotat2 && rotat2 > rotat3 /*&& rotat3 > rotat4*/
-				&& 45 > rotatDiff && rotatDiff > 5) {
-					cout << "rotacja w PRAWO " << rotat - rotat4 << endl;
-					gesture = 2;
-					gesture_timeout = 3;
-				}
+					gesture_timeout = 6;
+					//mouseClick(0);
+					//}
 
+				}
 				//przepisanie historii pozycji i wymiarów
 				sizeP4 = sizeP3;
 				sizeP3 = sizeP2;
@@ -297,7 +313,7 @@ int lost_mouse(VideoCapture& cap) {
 				color = Scalar(0, 255, 0);
 				break;
 			case 1:
-				color = Scalar(0, 255, 255);
+				color = Scalar(255, 0, 0);
 				break;
 			case 2:
 				color = Scalar(255, 0, 255);
