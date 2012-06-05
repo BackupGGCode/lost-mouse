@@ -85,6 +85,12 @@ void onMouse(int event, int x, int y, int, void*) {
 	}
 }
 
+//funkcja normalizująca kąt
+//zapobiega przejsciu 360 -> 0 stopni
+float inline normalizeAngle(float angle) {
+	return (angle + 180.0f) < 360.0f ? angle + 360.0f : angle;
+}
+
 int lost_mouse(VideoCapture& cap) {
 	cout << endl << "w funkcji lost_mouse(VideoCapture&)" << endl;
 
@@ -123,11 +129,15 @@ int lost_mouse(VideoCapture& cap) {
 	int gesture_timeout = 0;
 
 	//historia stosunku wysokosci do szerokosci obszaru
-	float sizeP4 = 0, sizeP3 = 0, sizeP2 = 0, sizeP1 = 0, sizeH1 = 0;
-	//historia polozenia srodka obszaru x i y
-	float pozX4 = 0, pozX3 = 0, pozX2 = 0, pozX1 = 0, pozY4 = 0, pozY3 = 0, pozY2 = 0, pozY1 = 0;
+	float sizeP4 = 0, sizeP3 = 0, sizeP2 = 0, sizeP1 = 0;
+	//historia współrzędnej x polozenia srodka obszaru
+	float pozX4 = 0, pozX3 = 0, pozX2 = 0, pozX1 = 0;
+	//historia współrzędnej y polozenia srodka obszaru
+	float pozY4 = 0, pozY3 = 0, pozY2 = 0, pozY1 = 0;
+	//historia stosunku wysokosci do szerokosci obszaru
+	float rotat4 = 0, rotat3 = 0, rotat2 = 0, rotat1 = 0;
 	//stan obecny obszaru
-	float sizeP, pozX, pozY;
+	float sizeP, pozX, pozY, rotat, rotatDiff;
 
 	//pobiera parametry klatki video
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH), movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
@@ -235,30 +245,21 @@ int lost_mouse(VideoCapture& cap) {
 				sizeP = trackBox.size.height / trackBox.size.width;
 				pozX = trackBox.center.x;
 				pozY = trackBox.center.y;
+				rotat = normalizeAngle(trackBox.angle);
+				rotatDiff = rotat - rotat4;
+
 				//detekcja LPM
-				if ((sizeP > sizeP1 && sizeP1 < sizeP2 && sizeP2 < sizeP3 && sizeP3 < sizeP4)
-						&& trackBox.size.height >= sizeH1) {
-					cout << frame_counter << "zmiana kształtu" << endl;
-					if (/*pozY > pozY1 &&*/ pozY1 < pozY2 && pozY2 < pozY3 && pozY3 < pozY4) {
-						cout << "LPM - pionowo - dół" << endl;
-						gesture = 1;
-						gesture_timeout = 3;
-					}
-					/*if (pozY1 > pozY2 && pozY2 > pozY3) {
-					 cout << "LPM - pionowo - góra" << endl;
-					 gesture = 1;
-					 gesture_timeout = 3;
-					 }
-					 if (pozX1 < pozX2 && pozX2 < pozX3) {
-					 cout << "LPM - poziomo - lewo" << endl;
-					 gesture = 1;
-					 gesture_timeout = 3;
-					 }
-					 if (pozX1 > pozX2 && pozX2 > pozX3) {
-					 cout << "LPM - poziomo - prawo" << endl;
-					 gesture = 1;
-					 gesture_timeout = 3;
-					 }*/
+				if (rotat < rotat1 && rotat1 < rotat2 && rotat2 < rotat3 /*&& rotat3 < rotat4*/
+				&& -45 < rotatDiff && rotatDiff < -5) {
+					cout << "rotacja w LEWO " << rotat - rotat4 << endl;
+					gesture = 1;
+					gesture_timeout = 3;
+				}
+				if (rotat > rotat1 && rotat1 > rotat2 && rotat2 > rotat3 /*&& rotat3 > rotat4*/
+				&& 45 > rotatDiff && rotatDiff > 5) {
+					cout << "rotacja w PRAWO " << rotat - rotat4 << endl;
+					gesture = 2;
+					gesture_timeout = 3;
 				}
 
 				//przepisanie historii pozycji i wymiarów
@@ -266,7 +267,6 @@ int lost_mouse(VideoCapture& cap) {
 				sizeP3 = sizeP2;
 				sizeP2 = sizeP1;
 				sizeP1 = sizeP;
-				sizeH1 =  trackBox.size.height;
 				pozX4 = pozX3;
 				pozX3 = pozX2;
 				pozX2 = pozX1;
@@ -275,7 +275,10 @@ int lost_mouse(VideoCapture& cap) {
 				pozY3 = pozY2;
 				pozY2 = pozY1;
 				pozY1 = pozY;
-
+				rotat4 = rotat3;
+				rotat3 = rotat2;
+				rotat2 = rotat1;
+				rotat1 = rotat;
 			}
 		} else if (trackObject < 0) {
 			paused = false;
@@ -294,10 +297,10 @@ int lost_mouse(VideoCapture& cap) {
 				color = Scalar(0, 255, 0);
 				break;
 			case 1:
-				color = Scalar(231, 0, 162);
+				color = Scalar(0, 255, 255);
 				break;
 			case 2:
-				color = Scalar(232, 21, 255);
+				color = Scalar(255, 0, 255);
 				break;
 			default:
 				color = Scalar(0, 0, 255);
@@ -323,7 +326,8 @@ int lost_mouse(VideoCapture& cap) {
 			if (!paused) {
 				cout << setw(5) << frame_counter << ";" << setw(6) << trackBox.center.x << ";" << setw(6)
 						<< trackBox.center.y << " ; " << setw(9) << trackBox.size.width << ";" << setw(8)
-						<< trackBox.size.height << ";" << endl;
+						<< trackBox.size.height << ";" << setw(9) << normalizeAngle(trackBox.angle)
+						<< ";" << endl;
 
 				if (!camera_video)
 					Sleep(100);
