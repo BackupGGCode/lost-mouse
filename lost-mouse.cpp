@@ -122,6 +122,9 @@ int lost_mouse(VideoCapture& cap) {
 	//min i max wartosci hsv do maski (na podstawie której okreslany jest ROI)
 	Scalar hsv_min(0, 30, MIN(10,256)), hsv_max(180, 256, MAX(10, 256));
 
+	//obecny stan maszyny stanowej
+	int stan;
+
 	bool paused = false;
 
 	//video jest brane z kamery video (opcja jest dostępna tylko dla kamer wideo)
@@ -143,6 +146,8 @@ int lost_mouse(VideoCapture& cap) {
 	float rot4 = 0, rot3 = 0, rot2 = 0, rot1 = 0, rot = 0;
 	//historia współrzędnej y polozenia srodka obszaru
 	float pozY4 = 0, pozY3 = 0, pozY2 = 0, pozY1 = 0, pozY = 0;
+	//historia współrzędnej x polozenia srodka obszaru
+	float pozX4 = 0, pozX3 = 0, pozX2 = 0, pozX1 = 0, pozX = 0;
 	//obliczenia dla obecnej dlatki , like  %D - zmiany w ostatnich klatach
 	float areaD, rotDiff, rotDL, rotDR, pozYD, prop;
 
@@ -246,6 +251,10 @@ int lost_mouse(VideoCapture& cap) {
 					rot3 = rot2;
 					rot2 = rot1;
 					rot1 = rot;
+					pozX4 = pozX3;
+					pozX3 = pozX2;
+					pozX2 = pozX1;
+					pozX1 = pozX;
 					pozY4 = pozY3;
 					pozY3 = pozY2;
 					pozY2 = pozY1;
@@ -255,7 +264,58 @@ int lost_mouse(VideoCapture& cap) {
 					area = trackBox.size.height * trackBox.size.width;
 					rot = normalizeAngle(trackBox.angle);
 					pozY = trackBox.center.y;
+					pozX = trackBox.center.x;
 					prop = trackBox.size.height / trackBox.size.width;
+
+					//maszyna stanów
+					Scalar color2 = Scalar(0, 0, 0);
+
+					//rozmiar ramki w % od brzegu okna
+					float border_check = 0.1;
+					//sprawdzanie, czy reka w polu
+					if(pozX<movie_width * border_check || pozX>movie_width * (1-2*border_check) || pozY<movie_height * border_check || pozY>movie_height * (1-2*border_check)){
+						//obecnie poza polem
+						if(pozX1<movie_width * border_check || pozX1>movie_width * (1-2*border_check) || pozY1<movie_height * border_check || pozY1>movie_height * (1-2*border_check)){
+							//obecnie i wczesniej poza polem => reka poza polem
+							stan = 0;
+						}else{
+							//obecnie poza polem, a wczesniej w polu => reka wyszla z pola widzenia
+							stan = 3;
+						}
+					}else{
+						//obecnie w polu widzenia kamery
+						if(pozX1<movie_width * border_check || pozX1>movie_width * (1-2*border_check) || pozY1<movie_height * border_check || pozY1>movie_height * (1-2*border_check)){
+							//obecnie w polu widzenia, wczesniej poza polem => reka sie pojawia
+							stan = 1;
+						}else{
+							//obecnie w polu i wczesniej tez w polu => reka w polu
+							stan = 2;
+						}
+					}
+
+
+					if(stan == 0){ //reka znajduje sie poza polem widzenia kamery
+
+						//put some code here
+						color2 = Scalar(0, 0, 255);
+					}else if(stan == 1){ //reka wchodzi w pole widzenia kamery
+
+						//put some code here
+						color2 = Scalar(0, 255, 255);
+					}else if(stan == 2){ //reka znajduje sie w polu widzenia kamery
+
+						//put some code here
+						color2 = Scalar(0, 255, 0);
+					}else if(stan == 3){ //reka wychodzi z pola widzenia kamery
+
+						//put some code here
+						color2 = Scalar(255, 255, 0);
+					}
+
+					//rysowanie ramki kontrolnej
+					rectangle(image, Rect(movie_width * border_check, movie_height * border_check,movie_width * (1-2*border_check),movie_height * (1-2*border_check)), color2, 1, CV_AA);
+
+
 
 					//obliczanie zmian na klatkę obecną
 					rotDiff = rot - rot4;
