@@ -272,41 +272,42 @@ int lost_mouse(VideoCapture& cap) {
 
 					//rozmiar ramki w % od brzegu okna
 					float border_check = 0.1;
-					//sprawdzanie, czy reka w polu
+
+					//sprawdzanie, czy reka znajduje sie w ramce kontrolnej
 					if(pozX<movie_width * border_check || pozX>movie_width * (1-2*border_check) || pozY<movie_height * border_check || pozY>movie_height * (1-2*border_check)){
-						//obecnie poza polem
+						//obecnie poza ramka
 						if(pozX1<movie_width * border_check || pozX1>movie_width * (1-2*border_check) || pozY1<movie_height * border_check || pozY1>movie_height * (1-2*border_check)){
-							//obecnie i wczesniej poza polem => reka poza polem
+							//obecnie i wczesniej poza ramka => reka poza ramka
 							stan = 0;
 						}else{
-							//obecnie poza polem, a wczesniej w polu => reka wyszla z pola widzenia
+							//obecnie poza ramka, a wczesniej w ramce => reka wyszla z ramki
 							stan = 3;
 						}
 					}else{
-						//obecnie w polu widzenia kamery
+						//obecnie w ramce
 						if(pozX1<movie_width * border_check || pozX1>movie_width * (1-2*border_check) || pozY1<movie_height * border_check || pozY1>movie_height * (1-2*border_check)){
-							//obecnie w polu widzenia, wczesniej poza polem => reka sie pojawia
+							//obecnie w ramce, wczesniej poza ramka => reka sie pojawia
 							stan = 1;
 						}else{
-							//obecnie w polu i wczesniej tez w polu => reka w polu
+							//obecnie w ramce i wczesniej tez w ramce => reka w ramce
 							stan = 2;
 						}
 					}
 
 
-					if(stan == 0){ //reka znajduje sie poza polem widzenia kamery
+					if(stan == 0){ //reka znajduje sie poza ramka
 
 						//put some code here
 						color2 = Scalar(0, 0, 255);
-					}else if(stan == 1){ //reka wchodzi w pole widzenia kamery
+					}else if(stan == 1){ //reka wchodzi w ramke
 
 						//put some code here
 						color2 = Scalar(0, 255, 255);
-					}else if(stan == 2){ //reka znajduje sie w polu widzenia kamery
+					}else if(stan == 2){ //reka znajduje sie w ramce
 
 						//put some code here
 						color2 = Scalar(0, 255, 0);
-					}else if(stan == 3){ //reka wychodzi z pola widzenia kamery
+					}else if(stan == 3){ //reka wychodzi z ramki
 
 						//put some code here
 						color2 = Scalar(255, 255, 0);
