@@ -15,10 +15,10 @@ using namespace std;
 
 /* 1 - wszystko wyłaczone - OFF
  * 0 - wszystko właczone - ON
- * mod2 = 1 - położenie sledzonego obiektu, wielkosc, rotacja
- * mod3 = 1 - ilosc wykrytych cech do klikniecia, jesli ono zaszło
- * mod5 = 1 - ilosc wykrytych cech do klinkniecia, nawet jesli nie zaszlo
- * mod7 = 1 spowolnione odtwarzenie video
+ * mod2 = 0 - położenie sledzonego obiektu, wielkosc, rotacja
+ * mod3 = 0 - ilosc wykrytych cech do klikniecia, jesli ono zaszło
+ * mod5 = 0 - ilosc wykrytych cech do klinkniecia, nawet jesli nie zaszlo
+ * mod7 = 0 spowolnione odtwarzenie video
  */
 int debug = 3 * 7;
 
