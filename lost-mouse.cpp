@@ -20,7 +20,7 @@ using namespace std;
  * mod5 = 1 - ilosc wykrytych cech do klinkniecia, nawet jesli nie zaszlo
  * mod7 = 1 spowolnione odtwarzenie video
  */
-int debug = 3*7;
+int debug = 3 * 7;
 
 //pokazywanie prawdopodobienstwa wstecznej propagacji histogramu
 bool backprojMode = false;
@@ -143,8 +143,8 @@ int lost_mouse(VideoCapture& cap) {
 	float rotat4 = 0, rotat3 = 0, rotat2 = 0, rotat1 = 0, rotat = 0;
 	//historia współrzędnej y polozenia srodka obszaru
 	float pozY4 = 0, pozY3 = 0, pozY2 = 0, pozY1 = 0, pozY = 0;
-	//obliczanie zmian w obcenej klatce
-	float areaD, rotatDiff, rotatDL, rotatDR, pozYD;
+	//obliczenia dla obecnej dlatki , like  %D - zmiany w ostatnich klatach
+	float areaD, rotatDiff, rotatDL, rotatDR, pozYD, prop;
 
 	//pobiera parametry klatki video
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH), movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
@@ -233,7 +233,7 @@ int lost_mouse(VideoCapture& cap) {
 				}
 
 				//ruch kursorem myszy
-				movemouse(trackBox, movie_width, movie_height);
+				//movemouse(trackBox, movie_width, movie_height);
 
 				//wykrywanie kliknięć
 				{
@@ -278,11 +278,11 @@ int lost_mouse(VideoCapture& cap) {
 
 					if (debug % 5 == 0) {
 						cout << setw(5) << frame_counter << "; warunki;" << setw(3) << areaD << ";"
-								<< setw(3) << rotatDR << ";" << setw(3) << rotatDL << setw(9)
-								<< rotatDiff << setw(2) << pozYD << ";" << endl;
+								<< setw(3) << rotatDR << ";" << setw(3) << rotatDL << ";" << setw(9)
+								<< rotatDiff << ";" << setw(2) << pozYD << ";" << endl;
 					}
 
-					int angleMin = 20, angleMax = 60;
+					float angleMin = 20, angleMax = 60;
 
 					//detekcja LPM
 					if (((/*wysokosc*/1 < pozYD && pozY > pozY4)
@@ -293,21 +293,42 @@ int lost_mouse(VideoCapture& cap) {
 						gesture = 1;
 						gesture_timeout = 5;
 
-						mouseClick(0);
+						//mouseClick(0);
 
 						if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
 							cout << setw(5) << frame_counter << "; LPM;" << setw(3) << areaD << ";"
-									<< setw(3) << rotatDR << ";" << setw(3) << rotatDL << setw(9)
-									<< rotatDiff << setw(2) << pozYD << ";" << endl;
+									<< setw(3) << rotatDR << ";" << setw(3) << rotatDL << ";" << setw(9)
+									<< rotatDiff << ";" << setw(2) << pozYD << ";" << endl;
 						}
 
 						//zerowanie historii - cooldown 5 klatek na gesty
 						area4 = area3 = area2 = area1 = area = 0;
 						rotat4 = rotat3 = rotat2 = rotat1 = rotat = 0;
 						pozY4 = pozY3 = pozY2 = pozY1 = pozY = 0;
+						continue;
 					}
 
-					//TODO: PPM
+					angleMax = 5;
+					prop = trackBox.size.height / trackBox.size.width;
+					//detekcja PPM
+					if ((/*proporcja*/1.9 < prop && prop < 3.5) && (/*kat*/170 < rotat && rotat < 190)
+							&& (/*zmiana kata*/-angleMax < rotatDiff && rotatDiff < angleMax)
+							&& (/*powierzchania*/2 < areaD && 0.7 < area / area && area / area4 < 0.9)) {
+						gesture = 2;
+						gesture_timeout = 5;
+
+						if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
+							cout << setw(5) << frame_counter << "; PPM;" << setw(3) << areaD << ";"
+									<< setw(9) << rotatDiff << setw(9) << area / area4 << ";" << setw(9)
+									<< rotat << ";" << setw(9) << prop << ";" << endl;
+						}
+
+						//zerowanie historii - cooldown 5 klatek na gesty
+						/*area4 = area3 = area2 = area1 = area = 0;
+						 rotat4 = rotat3 = rotat2 = rotat1 = rotat = 0;
+						 pozY4 = pozY3 = pozY2 = pozY1 = pozY = 0;
+						 */continue;
+					}
 				}
 			}
 		} else if (trackObject < 0) {
@@ -352,21 +373,19 @@ int lost_mouse(VideoCapture& cap) {
 
 				//rysuje srodek znalezionego obszaru
 				circle(image, trackBox.center, 4, color, -1);
-			} catch (Exception e) {
+			} catch (Exception& e) {
 				cout << setw(5) << frame_counter << "; bład rysowania znaczników" << endl;
 			}
-			//opcje debug'erskie
-			if (!paused) {
-				if (debug % 2 == 0) {
-					cout << setw(5) << frame_counter << ";" << setw(6) << trackBox.center.x << ";"
-							<< setw(6) << trackBox.center.y << " ; " << setw(9) << trackBox.size.width
-							<< ";" << setw(8) << trackBox.size.height << ";" << setw(9)
-							<< normalizeAngle(trackBox.angle) << ";" << endl;
-				}
 
-				if (debug % 7 == 0 && !camera_video)
-					Sleep(100);
+			if (!paused && debug % 2 == 0) {
+				cout << setw(5) << frame_counter << ";" << setw(6) << trackBox.center.x << ";" << setw(6)
+						<< trackBox.center.y << " ; " << setw(9) << trackBox.size.width << ";" << setw(8)
+						<< trackBox.size.height << ";" << setw(9) << normalizeAngle(trackBox.angle)
+						<< ";" << endl;
 			}
+
+			if (!paused && !camera_video && debug % 7 == 0)
+				Sleep(100);
 		}
 
 		//rysowanie prostokata od selekcji
