@@ -37,16 +37,21 @@ bool select_mouse_autom = 0;
 
 int screenWidth, screenHeight;
 
-void movemouse(RotatedRect trackBox, int wight, int height) {
+//rozmiar ramki kontrolnej w % od brzegu okna
+float border_check = 0.1;
+
+void movemouse(RotatedRect trackBox, int width, int height) {
 	Point2f centr = trackBox.center;
+	width = width * (1 - 2*border_check);
+	height = height * (1 - 2*border_check);
 	//normalizacja 100% video to 100% ekranu
 	/*Size2f size=trackBox.size;
 	 cout<<"wysokosc "<<size.height<<", szerokosc"<<size.width<<endl;
 	 cout<<size.height/size.width<<endl;*/
-	int iks = (int) centr.x * (screenWidth / wight);
+	int iks = (int) centr.x * (screenWidth / width);
 	int igrek = (int) centr.y * (screenHeight / height);
 	//ustawiamy kursor (btw 0,0 to lewy gorny rog ekranu)
-	SetCursorPos(iks, igrek);
+	SetCursorPos(screenWidth-iks, igrek);
 	//cout<<iks<<","<<igrek<<endl;
 }
 
@@ -124,6 +129,9 @@ int lost_mouse(VideoCapture& cap) {
 
 	//obecny stan maszyny stanowej
 	int stan;
+
+	// kolor ramki kontrolnej
+	Scalar color_ramka = Scalar(0, 0, 255);
 
 	bool paused = false;
 
@@ -237,9 +245,6 @@ int lost_mouse(VideoCapture& cap) {
 							trackWindow.y + r) & Rect(0, 0, cols, rows);
 				}
 
-				//ruch kursorem myszy
-				//movemouse(trackBox, movie_width, movie_height);
-
 				//wykrywanie kliknięć
 				{
 					//przepisanie historii pozycji i wymiarów
@@ -268,11 +273,6 @@ int lost_mouse(VideoCapture& cap) {
 					prop = trackBox.size.height / trackBox.size.width;
 
 					//maszyna stanów
-					Scalar color2 = Scalar(0, 0, 0);
-
-					//rozmiar ramki w % od brzegu okna
-					float border_check = 0.1;
-
 					//sprawdzanie, czy reka znajduje sie w ramce kontrolnej
 					if(pozX<movie_width * border_check || pozX>movie_width * (1-2*border_check) || pozY<movie_height * border_check || pozY>movie_height * (1-2*border_check)){
 						//obecnie poza ramka
@@ -298,25 +298,20 @@ int lost_mouse(VideoCapture& cap) {
 					if(stan == 0){ //reka znajduje sie poza ramka
 
 						//put some code here
-						color2 = Scalar(0, 0, 255);
+						color_ramka = Scalar(0, 0, 255);
 					}else if(stan == 1){ //reka wchodzi w ramke
 
 						//put some code here
-						color2 = Scalar(0, 255, 255);
+						color_ramka = Scalar(0, 255, 255);
 					}else if(stan == 2){ //reka znajduje sie w ramce
 
 						//put some code here
-						color2 = Scalar(0, 255, 0);
+						color_ramka = Scalar(0, 255, 0);
 					}else if(stan == 3){ //reka wychodzi z ramki
 
 						//put some code here
-						color2 = Scalar(255, 255, 0);
+						color_ramka = Scalar(255, 255, 0);
 					}
-
-					//rysowanie ramki kontrolnej
-					rectangle(image, Rect(movie_width * border_check, movie_height * border_check,movie_width * (1-2*border_check),movie_height * (1-2*border_check)), color2, 1, CV_AA);
-
-
 
 					//obliczanie zmian na klatkę obecną
 					rotDiff = rot - rot4;
@@ -333,52 +328,60 @@ int lost_mouse(VideoCapture& cap) {
 
 					float angleMin = 15, angleMax = 60;
 
-					//detekcja LPM
-					if (((/*wysokosc*/1 < pozYD && pozY > pozY4)
-							&& (/*powierzchania*/2 < areaD && area < area4))
-							&& ((/*lewo*/2 < rotDL && -angleMax < rotDiff && rotDiff < -angleMin)
-									|| (/*prawo*/2 < rotDR && angleMax > rotDiff && rotDiff > angleMin))) {
-						gesture = 1;
-						gesture_timeout = 5;
+					//jesli mamy reke w ramce to dopiero sie zajmujemy ruchem myszki i detekcja gestow
+					if(stan == 2){
 
-						//mouseClick(0);
+						//ruch kursorem myszy
+						movemouse(trackBox, movie_width, movie_height);
 
-						if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
-							cout << setw(5) << frame_counter << "; LPM;" << setw(3) << areaD << ";"
-									<< setw(3) << rotDR << ";" << setw(3) << rotDL << ";" << setw(9)
-									<< rotDiff << ";" << setw(2) << pozYD << ";" << endl;
+						//detekcja LPM
+						if (((/*wysokosc*/1 < pozYD && pozY > pozY4)
+								&& (/*powierzchania*/2 < areaD && area < area4))
+								&& ((/*lewo*/2 < rotDL && -angleMax < rotDiff && rotDiff < -angleMin)
+										|| (/*prawo*/2 < rotDR && angleMax > rotDiff && rotDiff > angleMin))) {
+							gesture = 1;
+							gesture_timeout = 5;
+
+							//mouseClick(0);
+
+							if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
+								cout << setw(5) << frame_counter << "; LPM;" << setw(3) << areaD << ";"
+										<< setw(3) << rotDR << ";" << setw(3) << rotDL << ";" << setw(9)
+										<< rotDiff << ";" << setw(2) << pozYD << ";" << endl;
+							}
+
+							//zerowanie historii - cooldown 5 klatek na gesty
+							area4 = area3 = area2 = area1 = area = 0;
+							rot4 = rot3 = rot2 = rot1 = rot = 0;
+							pozY4 = pozY3 = pozY2 = pozY1 = pozY = 0;
+							continue;
 						}
 
-						//zerowanie historii - cooldown 5 klatek na gesty
-						area4 = area3 = area2 = area1 = area = 0;
-						rot4 = rot3 = rot2 = rot1 = rot = 0;
-						pozY4 = pozY3 = pozY2 = pozY1 = pozY = 0;
-						continue;
-					}
+						angleMax = 5;
 
-					angleMax = 5;
+						//detekcja PPM
+						if ((/*proporcja*/1.9 < prop && prop < 3.5) && (/*kat*/160 < rot && rot < 200)
+								&& (/*zmiana kata*/-angleMax < rotDiff && rotDiff < angleMax)
+								&& (/*powierzchania*/2 < areaD && 0.7 < area / area4 && area / area4 < 0.9)) {
+							gesture = 2;
+							gesture_timeout = 5;
 
-					//detekcja PPM
-					if ((/*proporcja*/1.9 < prop && prop < 3.5) && (/*kat*/160 < rot && rot < 200)
-							&& (/*zmiana kata*/-angleMax < rotDiff && rotDiff < angleMax)
-							&& (/*powierzchania*/2 < areaD && 0.7 < area / area4 && area / area4 < 0.9)) {
-						gesture = 2;
-						gesture_timeout = 5;
+							//mouseClick(1);
 
-						//mouseClick(1);
+							if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
+								cout << setw(5) << frame_counter << "; PPM;" << setw(3) << areaD << ";"
+										<< setw(9) << rotDiff << ";" << setw(9) << area / area4 << ";"
+										<< setw(9) << rot << ";" << setw(9) << prop << ";" << endl;
+							}
 
-						if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
-							cout << setw(5) << frame_counter << "; PPM;" << setw(3) << areaD << ";"
-									<< setw(9) << rotDiff << ";" << setw(9) << area / area4 << ";"
-									<< setw(9) << rot << ";" << setw(9) << prop << ";" << endl;
+							//zerowanie historii - cooldown 5 klatek na gesty
+							area4 = area3 = area2 = area1 = area = 0;
+							rot4 = rot3 = rot2 = rot1 = rot = 0;
+							pozY4 = pozY3 = pozY2 = pozY1 = pozY = 0;
+							continue;
 						}
-
-						//zerowanie historii - cooldown 5 klatek na gesty
-						area4 = area3 = area2 = area1 = area = 0;
-						rot4 = rot3 = rot2 = rot1 = rot = 0;
-						pozY4 = pozY3 = pozY2 = pozY1 = pozY = 0;
-						continue;
 					}
+
 				}
 			}
 		} else if (trackObject < 0) {
@@ -389,6 +392,8 @@ int lost_mouse(VideoCapture& cap) {
 		if (backprojMode && backproj.rows != 0) {
 			cvtColor(backproj, image, CV_GRAY2BGR);
 		}
+		//rysowanie ramki kontrolnej
+		rectangle(image, Rect(movie_width * border_check, movie_height * border_check,movie_width * (1-2*border_check),movie_height * (1-2*border_check)), color_ramka, 1, CV_AA);
 
 		//rysowanie wykrytego obszaru tylko jeli wykryło obszar x!=0 || y!0=0
 		if (trackBox.center.x && trackBox.center.y) {
@@ -409,20 +414,24 @@ int lost_mouse(VideoCapture& cap) {
 			}
 
 			try {
-				//rysuje prostokat otaczajacy wykryty obszar
-				rectangle(image, trackBox.boundingRect(), color, 1, CV_AA);
+				//jesli reka znajdue sie poza ramka kontrolna to nie rysujemy ramki, ale nadal sledzimy
+				if(stan==2){
+					//rysuje prostokat otaczajacy wykryty obszar
+									rectangle(image, trackBox.boundingRect(), color, 1, CV_AA);
 
-				//rysuje prostokat dopasowany do obszaru
-				Point2f vertices[4];
-				trackBox.points(vertices);
-				for (int i = 0; i < 4; i++)
-					line(image, vertices[i], vertices[(i + 1) % 4], color, 2);
+									//rysuje prostokat dopasowany do obszaru
+									Point2f vertices[4];
+									trackBox.points(vertices);
+									for (int i = 0; i < 4; i++)
+										line(image, vertices[i], vertices[(i + 1) % 4], color, 2);
 
-				//rysuje eklipse
-				ellipse(image, trackBox, color, 3, CV_AA);
+									//rysuje eklipse
+									ellipse(image, trackBox, color, 3, CV_AA);
 
-				//rysuje srodek znalezionego obszaru
-				circle(image, trackBox.center, 4, color, -1);
+									//rysuje srodek znalezionego obszaru
+									circle(image, trackBox.center, 4, color, -1);
+				}
+
 			} catch (Exception& e) {
 				cout << setw(5) << frame_counter << "; bład rysowania znaczników" << endl;
 			}
