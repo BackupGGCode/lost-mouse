@@ -88,7 +88,7 @@ void onMouse(int event, int x, int y, int, void*) {
 //funkcja normalizująca kąt
 //zapobiega przejsciu 360 -> 0 stopni
 float inline normalizeAngle(float angle) {
-	return (angle + 180.0f) < 360.0f ? angle + 360.0f : angle;
+	return angle < 90.0f ? angle + 180.0f : angle;
 }
 
 int lost_mouse(VideoCapture& cap) {
@@ -137,7 +137,7 @@ int lost_mouse(VideoCapture& cap) {
 	//historia stosunku wysokosci do szerokosci obszaru
 	float rotat4 = 0, rotat3 = 0, rotat2 = 0, rotat1 = 0;
 	//stan obecny obszaru
-	float sizeP, pozX, pozY, rotat, rotatDiff, rotatDL, rotatDR, pozYD;
+	float sizeP, pozX, pozY, rotat, rotatDiff, rotatDL, rotatDR, pozYD, sizePD;
 
 	//pobiera parametry klatki video
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH), movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
@@ -247,7 +247,7 @@ int lost_mouse(VideoCapture& cap) {
 				pozY = trackBox.center.y;
 				rotat = normalizeAngle(trackBox.angle);
 				rotatDiff = rotat - rotat4;
-				rotatDL = 0, rotatDR = 0, pozYD = 0;
+				rotatDL = 0, rotatDR = 0, pozYD = 0, sizePD = 0;
 
 				pozY4 < pozY3 ? pozYD++ : 0;
 				pozY3 < pozY2 ? pozYD++ : 0;
@@ -261,17 +261,25 @@ int lost_mouse(VideoCapture& cap) {
 				rotat3 > rotat2 ? rotatDL++ : 0;
 				rotat2 > rotat1 ? rotatDL++ : 0;
 				rotat1 > rotat ? rotatDL++ : 0;
+				rotat4 > rotat3 ? rotatDL++ : 0;
+				rotat3 > rotat2 ? rotatDL++ : 0;
+				rotat2 > rotat1 ? rotatDL++ : 0;
+				rotat1 > rotat ? rotatDL++ : 0;
+				sizeP4 > sizeP3 ? sizePD++ : 0;
+				sizeP3 > sizeP2 ? sizePD++ : 0;
+				sizeP2 > sizeP1 ? sizePD++ : 0;
+				sizeP1 > sizeP ? sizePD++ : 0;
 
 				//detekcja LPM
-				if (2 < pozYD
-						&& ((/*w lewo*/1 < rotatDL && -35 < rotatDiff && rotatDiff < -10)
-								|| (/*w prawo*/1 < rotatDR && 35 > rotatDiff && rotatDiff > 10))) {
+				if (2 < pozYD && 2<sizePD
+						&& ((/*w lewo*/4== rotatDL && -60 < rotatDiff && rotatDiff < -12)
+								|| (/*w prawo*/4== rotatDR && 60 > rotatDiff && rotatDiff > 12))) {
 					/*if (gesture_timeout) {
 					 cout << "LPM - podwójny!" << endl;
 					 gesture_timeout = 3;
 					 gesture = 2;
 					 } else {*/
-					cout << "LPM" << endl;
+					cout << "LPM   " <<rotatDiff<<","<<sizeP<<","<<sizeP1<<","<<sizeP2<<","<<sizeP3<<","<<sizeP4<< endl;
 					gesture = 1;
 					gesture_timeout = 6;
 					//mouseClick(0);
@@ -340,10 +348,10 @@ int lost_mouse(VideoCapture& cap) {
 
 			//opcje debug'erskie
 			if (!paused) {
-				cout << setw(5) << frame_counter << ";" << setw(6) << trackBox.center.x << ";" << setw(6)
+				/*cout << setw(5) << frame_counter << ";" << setw(6) << trackBox.center.x << ";" << setw(6)
 						<< trackBox.center.y << " ; " << setw(9) << trackBox.size.width << ";" << setw(8)
 						<< trackBox.size.height << ";" << setw(9) << normalizeAngle(trackBox.angle)
-						<< ";" << endl;
+						<< ";" << endl;*/
 
 				if (!camera_video)
 					Sleep(100);
