@@ -18,8 +18,9 @@ using namespace std;
  * mod2 = 1 - położenie sledzonego obiektu, wielkosc, rotacja
  * mod3 = 1 - ilosc wykrytych cech do klikniecia, jesli ono zaszło
  * mod5 = 1 - ilosc wykrytych cech do klinkniecia, nawet jesli nie zaszlo
+ * mod7 = 1 spowolnione odtwarzenie video
  */
-int debug = 3;
+int debug = 3*7;
 
 //pokazywanie prawdopodobienstwa wstecznej propagacji histogramu
 bool backprojMode = false;
@@ -108,7 +109,7 @@ int lost_mouse(VideoCapture& cap) {
 	//znalezioy wynik camshift'a
 	RotatedRect trackBox;
 	//przechowywuja klatke
-	Mat hsv_ia, hue_ia, median_ia, binary_ia, luminancy_ia, backproj;
+	Mat hsv_ia, hue_ia, luminancy_ia, backproj;
 	//do masek i do ROI
 	Mat mask, roi, maskroi;
 	//do obsługi histogramu
@@ -182,8 +183,6 @@ int lost_mouse(VideoCapture& cap) {
 			cout << "automatyczne pobieranie koloru dloni - zrobione!" << endl;
 		}
 
-		//frame.copyTo(image);
-
 		if (!paused) {
 			//zmiana przestrzeni barwnej:bgr->hsv
 			cvtColor(image, hsv_ia, CV_BGR2HSV);
@@ -198,21 +197,10 @@ int lost_mouse(VideoCapture& cap) {
 
 				//poprawienie jakosci obrazu
 				{
-					if (camera_video) {
-						//binaryzacja dziala beznadziejnie w normalnych warunkach
-						binary_ia = hue_ia;
-					} else {
-						//binaryzacja - przy dobrze odróżniającym sie tle poprawia obraz
-						binary_ia.create(hue_ia.size(), hue_ia.depth());
-						threshold(hue_ia, binary_ia, 32.0, 256.0, THRESH_BINARY);
-					}
-
 					//filtr medianowy - popraiwa szumy
-					median_ia.create(binary_ia.size(), binary_ia.depth());
-					medianBlur(binary_ia, median_ia, 3);
+					luminancy_ia.create(hue_ia.size(), hue_ia.depth());
+					medianBlur(hue_ia, luminancy_ia, 3);
 				}
-
-				luminancy_ia = median_ia;
 
 				//obliczanie histogramu
 				if (trackObject < 0) {
@@ -245,7 +233,7 @@ int lost_mouse(VideoCapture& cap) {
 				}
 
 				//ruch kursorem myszy
-				//movemouse(trackBox, movie_width, movie_height);
+				movemouse(trackBox, movie_width, movie_height);
 
 				//wykrywanie kliknięć
 				{
@@ -294,23 +282,29 @@ int lost_mouse(VideoCapture& cap) {
 								<< rotatDiff << setw(2) << pozYD << ";" << endl;
 					}
 
-					int angleMin = 12, angleMax = 60;
+					int angleMin = 20, angleMax = 60;
 
 					//detekcja LPM
 					if (((/*wysokosc*/1 < pozYD && pozY > pozY4)
 							&& (/*powierzchania*/2 < areaD && area < area4))
-							&& ((/*lewo*/4 == rotatDL && -angleMax < rotatDiff && rotatDiff < -angleMin)
-									|| (/*prawo*/4 == rotatDR && angleMax > rotatDiff
+							&& ((/*lewo*/2 < rotatDL && -angleMax < rotatDiff && rotatDiff < -angleMin)
+									|| (/*prawo*/2 < rotatDR && angleMax > rotatDiff
 											&& rotatDiff > angleMin))) {
 						gesture = 1;
 						gesture_timeout = 5;
-						//mouseClick(0);
+
+						mouseClick(0);
 
 						if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
 							cout << setw(5) << frame_counter << "; LPM;" << setw(3) << areaD << ";"
 									<< setw(3) << rotatDR << ";" << setw(3) << rotatDL << setw(9)
 									<< rotatDiff << setw(2) << pozYD << ";" << endl;
 						}
+
+						//zerowanie historii - cooldown 5 klatek na gesty
+						area4 = area3 = area2 = area1 = area = 0;
+						rotat4 = rotat3 = rotat2 = rotat1 = rotat = 0;
+						pozY4 = pozY3 = pozY2 = pozY1 = pozY = 0;
 					}
 
 					//TODO: PPM
@@ -370,7 +364,7 @@ int lost_mouse(VideoCapture& cap) {
 							<< normalizeAngle(trackBox.angle) << ";" << endl;
 				}
 
-				if (!camera_video)
+				if (debug % 7 == 0 && !camera_video)
 					Sleep(100);
 			}
 		}
