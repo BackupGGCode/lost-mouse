@@ -136,16 +136,14 @@ int lost_mouse(VideoCapture& cap) {
 	int gesture = 0;
 	int gesture_timeout = 0;
 
+	//historia powierzchni wykrytego obszaru
+	float area4 = 0, area3 = 0, area2 = 0, area1 = 0, area = 0;
 	//historia stosunku wysokosci do szerokosci obszaru
-	float sizeP4 = 0, sizeP3 = 0, sizeP2 = 0, sizeP1 = 0;
-	//historia współrzędnej x polozenia srodka obszaru
-	float pozX4 = 0, pozX3 = 0, pozX2 = 0, pozX1 = 0;
+	float rotat4 = 0, rotat3 = 0, rotat2 = 0, rotat1 = 0, rotat = 0;
 	//historia współrzędnej y polozenia srodka obszaru
-	float pozY4 = 0, pozY3 = 0, pozY2 = 0, pozY1 = 0;
-	//historia stosunku wysokosci do szerokosci obszaru
-	float rotat5 = 0, rotat4 = 0, rotat3 = 0, rotat2 = 0, rotat1 = 0;
-	//stan obecny obszaru
-	float sizeP, pozX, pozY, rotat, rotatDiff, rotatDL, rotatDR, pozYD, sizePD;
+	float pozY4 = 0, pozY3 = 0, pozY2 = 0, pozY1 = 0, pozY = 0;
+	//obliczanie zmian w obcenej klatce
+	float areaD, rotatDiff, rotatDL, rotatDR, pozYD;
 
 	//pobiera parametry klatki video
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH), movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
@@ -249,75 +247,74 @@ int lost_mouse(VideoCapture& cap) {
 				//ruch kursorem myszy
 				//movemouse(trackBox, movie_width, movie_height);
 
-				//obliczenie/przypisanie aktualnego stanu
-				sizeP = trackBox.size.height / trackBox.size.width;
-				pozX = trackBox.center.x;
-				pozY = trackBox.center.y;
-				rotat = normalizeAngle(trackBox.angle);
-				rotatDiff = rotat - rotat4;
-				rotatDL = 0, rotatDR = 0, pozYD = 0, sizePD = 0;
+				//wykrywanie kliknięć
+				{
+					//przepisanie historii pozycji i wymiarów
+					area4 = area3;
+					area3 = area2;
+					area2 = area1;
+					area1 = area;
+					rotat4 = rotat3;
+					rotat3 = rotat2;
+					rotat2 = rotat1;
+					rotat1 = rotat;
+					pozY4 = pozY3;
+					pozY3 = pozY2;
+					pozY2 = pozY1;
+					pozY1 = pozY;
 
-				pozY4 < pozY3 ? pozYD++ : 0;
-				pozY3 < pozY2 ? pozYD++ : 0;
-				pozY2 < pozY1 ? pozYD++ : 0;
-				pozY1 < pozY ? pozYD++ : 0;
-				//rotat5 < rotat4 ? rotatDR++ : 0;
-				rotat4 < rotat3 ? rotatDR++ : 0;
-				rotat3 < rotat2 ? rotatDR++ : 0;
-				rotat2 < rotat1 ? rotatDR++ : 0;
-				rotat1 < rotat ? rotatDR++ : 0;
-				//rotat5 > rotat4 ? rotatDL++ : 0;
-				rotat4 > rotat3 ? rotatDL++ : 0;
-				rotat3 > rotat2 ? rotatDL++ : 0;
-				rotat2 > rotat1 ? rotatDL++ : 0;
-				rotat1 > rotat ? rotatDL++ : 0;
-				sizeP4 > sizeP3 ? sizePD++ : 0;
-				sizeP3 > sizeP2 ? sizePD++ : 0;
-				sizeP2 > sizeP1 ? sizePD++ : 0;
-				sizeP1 > sizeP ? sizePD++ : 0;
+					//przypisanie aktualnego stanu
+					area = trackBox.size.height * trackBox.size.width;
+					rotat = normalizeAngle(trackBox.angle);
+					pozY = trackBox.center.y;
 
-				if (debug % 5 == 0) {
-					cout << setw(5) << frame_counter << "; warunki;" << setw(2) << sizePD << ";"
-							<< setw(2) << pozYD << ";" << setw(3) << rotatDR << ";" << setw(3) << rotatDL
-							<< setw(9) << rotatDiff << endl;
-				}
+					//obliczanie zmian na klatkę obecną
+					rotatDiff = rotat - rotat4;
+					areaD = 0, rotatDL = 0, rotatDR = 0, pozYD = 0;
+					area4 > area3 ? areaD++ : 0;
+					area3 > area2 ? areaD++ : 0;
+					area2 > area1 ? areaD++ : 0;
+					area1 > area ? areaD++ : 0;
+					rotat4 < rotat3 ? rotatDR++ : 0;
+					rotat3 < rotat2 ? rotatDR++ : 0;
+					rotat2 < rotat1 ? rotatDR++ : 0;
+					rotat1 < rotat ? rotatDR++ : 0;
+					rotat4 > rotat3 ? rotatDL++ : 0;
+					rotat3 > rotat2 ? rotatDL++ : 0;
+					rotat2 > rotat1 ? rotatDL++ : 0;
+					rotat1 > rotat ? rotatDL++ : 0;
+					pozY4 < pozY3 ? pozYD++ : 0;
+					pozY3 < pozY2 ? pozYD++ : 0;
+					pozY2 < pozY1 ? pozYD++ : 0;
+					pozY1 < pozY ? pozYD++ : 0;
 
-				int angleMin = 15, angleMax = 60;
+					if (debug % 5 == 0) {
+						cout << setw(5) << frame_counter << "; warunki;" << setw(3) << areaD << ";"
+								<< setw(3) << rotatDR << ";" << setw(3) << rotatDL << setw(9)
+								<< rotatDiff << setw(2) << pozYD << ";" << endl;
+					}
 
-				//detekcja LPM
-				if (1 < pozYD && pozY > pozY4) {
-					if ((/*lewo*/4 == rotatDL && -angleMax < rotatDiff && rotatDiff < -angleMin)
-							|| (/*prawo*/4 == rotatDR && angleMax > rotatDiff && rotatDiff > angleMin)) {
-						if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
-							cout << setw(5) << frame_counter << "; LPM;" << setw(2) << sizePD << ";"
-									<< setw(2) << pozYD << ";" << setw(3) << rotatDR << ";" << setw(3)
-									<< rotatDL << setw(9) << rotatDiff << endl;
-						}
+					int angleMin = 12, angleMax = 60;
 
+					//detekcja LPM
+					if (((/*wysokosc*/1 < pozYD && pozY > pozY4)
+							&& (/*powierzchania*/2 < areaD && area < area4))
+							&& ((/*lewo*/4 == rotatDL && -angleMax < rotatDiff && rotatDiff < -angleMin)
+									|| (/*prawo*/4 == rotatDR && angleMax > rotatDiff
+											&& rotatDiff > angleMin))) {
 						gesture = 1;
-						gesture_timeout = 6;
+						gesture_timeout = 5;
 						//mouseClick(0);
 
+						if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
+							cout << setw(5) << frame_counter << "; LPM;" << setw(3) << areaD << ";"
+									<< setw(3) << rotatDR << ";" << setw(3) << rotatDL << setw(9)
+									<< rotatDiff << setw(2) << pozYD << ";" << endl;
+						}
 					}
+
+					//TODO: PPM
 				}
-				//przepisanie historii pozycji i wymiarów
-				sizeP4 = sizeP3;
-				sizeP3 = sizeP2;
-				sizeP2 = sizeP1;
-				sizeP1 = sizeP;
-				pozX4 = pozX3;
-				pozX3 = pozX2;
-				pozX2 = pozX1;
-				pozX1 = pozX;
-				pozY4 = pozY3;
-				pozY3 = pozY2;
-				pozY2 = pozY1;
-				pozY1 = pozY;
-				rotat5 = rotat4;
-				rotat4 = rotat3;
-				rotat3 = rotat2;
-				rotat2 = rotat1;
-				rotat1 = rotat;
 			}
 		} else if (trackObject < 0) {
 			paused = false;
