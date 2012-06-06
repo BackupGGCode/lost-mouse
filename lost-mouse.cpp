@@ -13,6 +13,14 @@
 using namespace cv;
 using namespace std;
 
+/* 1 - wszystko wyłaczone - OFF
+ * 0 - wszystko właczone - ON
+ * mod2 = 1 - położenie sledzonego obiektu, wielkosc, rotacja
+ * mod3 = 1 - ilosc wykrytych cech do klikniecia, jesli ono zaszło
+ * mod5 = 1 - ilosc wykrytych cech do klinkniecia, nawet jesli nie zaszlo
+ */
+int debug = 3;
+
 //pokazywanie prawdopodobienstwa wstecznej propagacji histogramu
 bool backprojMode = false;
 //stan do rysowania zaznaczanego obszaru
@@ -135,7 +143,7 @@ int lost_mouse(VideoCapture& cap) {
 	//historia współrzędnej y polozenia srodka obszaru
 	float pozY4 = 0, pozY3 = 0, pozY2 = 0, pozY1 = 0;
 	//historia stosunku wysokosci do szerokosci obszaru
-	float rotat4 = 0, rotat3 = 0, rotat2 = 0, rotat1 = 0;
+	float rotat5 = 0, rotat4 = 0, rotat3 = 0, rotat2 = 0, rotat1 = 0;
 	//stan obecny obszaru
 	float sizeP, pozX, pozY, rotat, rotatDiff, rotatDL, rotatDR, pozYD, sizePD;
 
@@ -253,14 +261,12 @@ int lost_mouse(VideoCapture& cap) {
 				pozY3 < pozY2 ? pozYD++ : 0;
 				pozY2 < pozY1 ? pozYD++ : 0;
 				pozY1 < pozY ? pozYD++ : 0;
+				//rotat5 < rotat4 ? rotatDR++ : 0;
 				rotat4 < rotat3 ? rotatDR++ : 0;
 				rotat3 < rotat2 ? rotatDR++ : 0;
 				rotat2 < rotat1 ? rotatDR++ : 0;
 				rotat1 < rotat ? rotatDR++ : 0;
-				rotat4 > rotat3 ? rotatDL++ : 0;
-				rotat3 > rotat2 ? rotatDL++ : 0;
-				rotat2 > rotat1 ? rotatDL++ : 0;
-				rotat1 > rotat ? rotatDL++ : 0;
+				//rotat5 > rotat4 ? rotatDL++ : 0;
 				rotat4 > rotat3 ? rotatDL++ : 0;
 				rotat3 > rotat2 ? rotatDL++ : 0;
 				rotat2 > rotat1 ? rotatDL++ : 0;
@@ -270,21 +276,29 @@ int lost_mouse(VideoCapture& cap) {
 				sizeP2 > sizeP1 ? sizePD++ : 0;
 				sizeP1 > sizeP ? sizePD++ : 0;
 
-				//detekcja LPM
-				if (2 < pozYD && 2<sizePD
-						&& ((/*w lewo*/4== rotatDL && -60 < rotatDiff && rotatDiff < -12)
-								|| (/*w prawo*/4== rotatDR && 60 > rotatDiff && rotatDiff > 12))) {
-					/*if (gesture_timeout) {
-					 cout << "LPM - podwójny!" << endl;
-					 gesture_timeout = 3;
-					 gesture = 2;
-					 } else {*/
-					cout << "LPM   " <<rotatDiff<<","<<sizeP<<","<<sizeP1<<","<<sizeP2<<","<<sizeP3<<","<<sizeP4<< endl;
-					gesture = 1;
-					gesture_timeout = 6;
-					//mouseClick(0);
-					//}
+				if (debug % 5 == 0) {
+					cout << setw(5) << frame_counter << "; warunki;" << setw(2) << sizePD << ";"
+							<< setw(2) << pozYD << ";" << setw(3) << rotatDR << ";" << setw(3) << rotatDL
+							<< setw(9) << rotatDiff << endl;
+				}
 
+				int angleMin = 15, angleMax = 60;
+
+				//detekcja LPM
+				if (1 < pozYD && pozY > pozY4) {
+					if ((/*lewo*/4 == rotatDL && -angleMax < rotatDiff && rotatDiff < -angleMin)
+							|| (/*prawo*/4 == rotatDR && angleMax > rotatDiff && rotatDiff > angleMin)) {
+						if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
+							cout << setw(5) << frame_counter << "; LPM;" << setw(2) << sizePD << ";"
+									<< setw(2) << pozYD << ";" << setw(3) << rotatDR << ";" << setw(3)
+									<< rotatDL << setw(9) << rotatDiff << endl;
+						}
+
+						gesture = 1;
+						gesture_timeout = 6;
+						//mouseClick(0);
+
+					}
 				}
 				//przepisanie historii pozycji i wymiarów
 				sizeP4 = sizeP3;
@@ -299,6 +313,7 @@ int lost_mouse(VideoCapture& cap) {
 				pozY3 = pozY2;
 				pozY2 = pozY1;
 				pozY1 = pozY;
+				rotat5 = rotat4;
 				rotat4 = rotat3;
 				rotat3 = rotat2;
 				rotat2 = rotat1;
@@ -331,27 +346,32 @@ int lost_mouse(VideoCapture& cap) {
 				break;
 			}
 
-			//rysuje prostokat otaczajacy wykryty obszar
-			rectangle(image, trackBox.boundingRect(), color, 1, CV_AA);
+			try {
+				//rysuje prostokat otaczajacy wykryty obszar
+				rectangle(image, trackBox.boundingRect(), color, 1, CV_AA);
 
-			//rysuje prostokat dopasowany do obszaru
-			Point2f vertices[4];
-			trackBox.points(vertices);
-			for (int i = 0; i < 4; i++)
-				line(image, vertices[i], vertices[(i + 1) % 4], color, 2);
+				//rysuje prostokat dopasowany do obszaru
+				Point2f vertices[4];
+				trackBox.points(vertices);
+				for (int i = 0; i < 4; i++)
+					line(image, vertices[i], vertices[(i + 1) % 4], color, 2);
 
-			//rysuje eklipse
-			ellipse(image, trackBox, color, 3, CV_AA);
+				//rysuje eklipse
+				ellipse(image, trackBox, color, 3, CV_AA);
 
-			//rysuje srodek znalezionego obszaru
-			circle(image, trackBox.center, 4, color, -1);
-
+				//rysuje srodek znalezionego obszaru
+				circle(image, trackBox.center, 4, color, -1);
+			} catch (Exception e) {
+				cout << setw(5) << frame_counter << "; bład rysowania znaczników" << endl;
+			}
 			//opcje debug'erskie
 			if (!paused) {
-				/*cout << setw(5) << frame_counter << ";" << setw(6) << trackBox.center.x << ";" << setw(6)
-						<< trackBox.center.y << " ; " << setw(9) << trackBox.size.width << ";" << setw(8)
-						<< trackBox.size.height << ";" << setw(9) << normalizeAngle(trackBox.angle)
-						<< ";" << endl;*/
+				if (debug % 2 == 0) {
+					cout << setw(5) << frame_counter << ";" << setw(6) << trackBox.center.x << ";"
+							<< setw(6) << trackBox.center.y << " ; " << setw(9) << trackBox.size.width
+							<< ";" << setw(8) << trackBox.size.height << ";" << setw(9)
+							<< normalizeAngle(trackBox.angle) << ";" << endl;
+				}
 
 				if (!camera_video)
 					Sleep(100);
@@ -415,7 +435,7 @@ void help_arg() {
 }
 
 int main(int argc, const char** argv) {
-	//mozliwe arguemnty programu
+//mozliwe arguemnty programu
 	string str_help("--help");
 	if (argc == 2 && str_help.compare(argv[1]) == 0) {
 		help_arg();
@@ -426,7 +446,7 @@ int main(int argc, const char** argv) {
 	screenHeight = GetSystemMetrics(SM_CYSCREEN);
 	cout << screenWidth << "," << screenHeight << " - wymiary ekranu [piksele]" << endl;
 
-	//wczytanie streamu video
+//wczytanie streamu video
 	VideoCapture vcap;
 	string str_null("null");
 	if (argc < 2 || str_null.compare(argv[1]) == 0) {
@@ -445,7 +465,7 @@ int main(int argc, const char** argv) {
 		return -1;
 	}
 
-	//automatyczne zaznaczanie dłoni w srodku poczatkowej klatki video
+//automatyczne zaznaczanie dłoni w srodku poczatkowej klatki video
 	string str_select("true");
 	select_mouse_autom = argc < 3 || str_select.compare(argv[2]) == 0;
 	cout << "automatyczne zaznaczanie dłoni: " << (select_mouse_autom ? "true" : "false") << endl;
@@ -458,9 +478,9 @@ int main(int argc, const char** argv) {
 
 	cout << endl << after - before << " - czas sledzenia dloni [ms]" << endl;
 
-	//test kliniecie prawym przyciskiem myszy
-	//SetCursorPos(300, 300);
-	//mouseClick(1);
+//test kliniecie prawym przyciskiem myszy
+//SetCursorPos(300, 300);
+//mouseClick(1);
 
 	return 0;
 }
