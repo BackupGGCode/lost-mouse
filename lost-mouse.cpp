@@ -140,11 +140,11 @@ int lost_mouse(VideoCapture& cap) {
 	//historia powierzchni wykrytego obszaru
 	float area4 = 0, area3 = 0, area2 = 0, area1 = 0, area = 0;
 	//historia stosunku wysokosci do szerokosci obszaru
-	float rotat4 = 0, rotat3 = 0, rotat2 = 0, rotat1 = 0, rotat = 0;
+	float rot4 = 0, rot3 = 0, rot2 = 0, rot1 = 0, rot = 0;
 	//historia współrzędnej y polozenia srodka obszaru
 	float pozY4 = 0, pozY3 = 0, pozY2 = 0, pozY1 = 0, pozY = 0;
 	//obliczenia dla obecnej dlatki , like  %D - zmiany w ostatnich klatach
-	float areaD, rotatDiff, rotatDL, rotatDR, pozYD, prop;
+	float areaD, rotDiff, rotDL, rotDR, pozYD, prop;
 
 	//pobiera parametry klatki video
 	int movie_width = cap.get(CV_CAP_PROP_FRAME_WIDTH), movie_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
@@ -242,10 +242,10 @@ int lost_mouse(VideoCapture& cap) {
 					area3 = area2;
 					area2 = area1;
 					area1 = area;
-					rotat4 = rotat3;
-					rotat3 = rotat2;
-					rotat2 = rotat1;
-					rotat1 = rotat;
+					rot4 = rot3;
+					rot3 = rot2;
+					rot2 = rot1;
+					rot1 = rot;
 					pozY4 = pozY3;
 					pozY3 = pozY2;
 					pozY2 = pozY1;
@@ -253,43 +253,30 @@ int lost_mouse(VideoCapture& cap) {
 
 					//przypisanie aktualnego stanu
 					area = trackBox.size.height * trackBox.size.width;
-					rotat = normalizeAngle(trackBox.angle);
+					rot = normalizeAngle(trackBox.angle);
 					pozY = trackBox.center.y;
+					prop = trackBox.size.height / trackBox.size.width;
 
 					//obliczanie zmian na klatkę obecną
-					rotatDiff = rotat - rotat4;
-					areaD = 0, rotatDL = 0, rotatDR = 0, pozYD = 0;
-					area4 > area3 ? areaD++ : 0;
-					area3 > area2 ? areaD++ : 0;
-					area2 > area1 ? areaD++ : 0;
-					area1 > area ? areaD++ : 0;
-					rotat4 < rotat3 ? rotatDR++ : 0;
-					rotat3 < rotat2 ? rotatDR++ : 0;
-					rotat2 < rotat1 ? rotatDR++ : 0;
-					rotat1 < rotat ? rotatDR++ : 0;
-					rotat4 > rotat3 ? rotatDL++ : 0;
-					rotat3 > rotat2 ? rotatDL++ : 0;
-					rotat2 > rotat1 ? rotatDL++ : 0;
-					rotat1 > rotat ? rotatDL++ : 0;
-					pozY4 < pozY3 ? pozYD++ : 0;
-					pozY3 < pozY2 ? pozYD++ : 0;
-					pozY2 < pozY1 ? pozYD++ : 0;
-					pozY1 < pozY ? pozYD++ : 0;
+					rotDiff = rot - rot4;
+					areaD = (area4 > area3) + (area3 > area2) + (area2 > area1) + (area1 > area);
+					rotDR = (rot4 < rot3) + (rot3 < rot2) + (rot2 < rot1) + (rot1 < rot);
+					rotDL = (rot4 > rot3) + (rot3 > rot2) + (rot2 > rot1) + (rot1 > rot);
+					pozYD = (pozY4 < pozY3) + (pozY3 < pozY2) + (pozY2 < pozY1) + (pozY1 < pozY);
 
 					if (debug % 5 == 0) {
 						cout << setw(5) << frame_counter << "; warunki;" << setw(3) << areaD << ";"
-								<< setw(3) << rotatDR << ";" << setw(3) << rotatDL << ";" << setw(9)
-								<< rotatDiff << ";" << setw(2) << pozYD << ";" << endl;
+								<< setw(3) << rotDR << ";" << setw(3) << rotDL << ";" << setw(9)
+								<< rotDiff << ";" << setw(2) << pozYD << ";" << endl;
 					}
 
-					float angleMin = 20, angleMax = 60;
+					float angleMin = 15, angleMax = 60;
 
 					//detekcja LPM
 					if (((/*wysokosc*/1 < pozYD && pozY > pozY4)
 							&& (/*powierzchania*/2 < areaD && area < area4))
-							&& ((/*lewo*/2 < rotatDL && -angleMax < rotatDiff && rotatDiff < -angleMin)
-									|| (/*prawo*/2 < rotatDR && angleMax > rotatDiff
-											&& rotatDiff > angleMin))) {
+							&& ((/*lewo*/2 < rotDL && -angleMax < rotDiff && rotDiff < -angleMin)
+									|| (/*prawo*/2 < rotDR && angleMax > rotDiff && rotDiff > angleMin))) {
 						gesture = 1;
 						gesture_timeout = 5;
 
@@ -297,37 +284,39 @@ int lost_mouse(VideoCapture& cap) {
 
 						if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
 							cout << setw(5) << frame_counter << "; LPM;" << setw(3) << areaD << ";"
-									<< setw(3) << rotatDR << ";" << setw(3) << rotatDL << ";" << setw(9)
-									<< rotatDiff << ";" << setw(2) << pozYD << ";" << endl;
+									<< setw(3) << rotDR << ";" << setw(3) << rotDL << ";" << setw(9)
+									<< rotDiff << ";" << setw(2) << pozYD << ";" << endl;
 						}
 
 						//zerowanie historii - cooldown 5 klatek na gesty
 						area4 = area3 = area2 = area1 = area = 0;
-						rotat4 = rotat3 = rotat2 = rotat1 = rotat = 0;
+						rot4 = rot3 = rot2 = rot1 = rot = 0;
 						pozY4 = pozY3 = pozY2 = pozY1 = pozY = 0;
 						continue;
 					}
 
 					angleMax = 5;
-					prop = trackBox.size.height / trackBox.size.width;
+
 					//detekcja PPM
-					if ((/*proporcja*/1.9 < prop && prop < 3.5) && (/*kat*/170 < rotat && rotat < 190)
-							&& (/*zmiana kata*/-angleMax < rotatDiff && rotatDiff < angleMax)
-							&& (/*powierzchania*/2 < areaD && 0.7 < area / area && area / area4 < 0.9)) {
+					if ((/*proporcja*/1.9 < prop && prop < 3.5) && (/*kat*/160 < rot && rot < 200)
+							&& (/*zmiana kata*/-angleMax < rotDiff && rotDiff < angleMax)
+							&& (/*powierzchania*/2 < areaD && 0.7 < area / area4 && area / area4 < 0.9)) {
 						gesture = 2;
 						gesture_timeout = 5;
 
+						//mouseClick(1);
+
 						if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
 							cout << setw(5) << frame_counter << "; PPM;" << setw(3) << areaD << ";"
-									<< setw(9) << rotatDiff << setw(9) << area / area4 << ";" << setw(9)
-									<< rotat << ";" << setw(9) << prop << ";" << endl;
+									<< setw(9) << rotDiff << ";" << setw(9) << area / area4 << ";"
+									<< setw(9) << rot << ";" << setw(9) << prop << ";" << endl;
 						}
 
 						//zerowanie historii - cooldown 5 klatek na gesty
-						/*area4 = area3 = area2 = area1 = area = 0;
-						 rotat4 = rotat3 = rotat2 = rotat1 = rotat = 0;
-						 pozY4 = pozY3 = pozY2 = pozY1 = pozY = 0;
-						 */continue;
+						area4 = area3 = area2 = area1 = area = 0;
+						rot4 = rot3 = rot2 = rot1 = rot = 0;
+						pozY4 = pozY3 = pozY2 = pozY1 = pozY = 0;
+						continue;
 					}
 				}
 			}
