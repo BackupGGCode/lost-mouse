@@ -414,7 +414,7 @@ int lost_mouse(VideoCapture& cap) {
 			}
 
 			try {
-				//jesli reka znajdue sie poza ramka kontrolna to nie rysujemy ramki, ale nadal sledzimy
+				//jesli reka znajdue sie poza ramka kontrolna, to nie rysujemy ramki, ale nadal sledzimy
 				if(stan==2){
 					//rysuje prostokat otaczajacy wykryty obszar
 									rectangle(image, trackBox.boundingRect(), color, 1, CV_AA);
