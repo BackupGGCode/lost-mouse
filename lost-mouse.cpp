@@ -269,6 +269,9 @@ int lost_mouse(VideoCapture& cap) {
 					rot = normalizeAngle(trackBox.angle);
 					pozY = trackBox.center.y;
 					pozX = trackBox.center.x;
+					//pozY = (pozY1 + pozY2 + pozY3 + pozY4 + trackBox.center.y)/5;
+					//pozX = (pozX1 + pozX2 + pozX3 + pozX4 + trackBox.center.x)/5;
+
 					prop = trackBox.size.height / trackBox.size.width;
 
 					//maszyna stanów
