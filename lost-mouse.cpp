@@ -42,17 +42,16 @@ float border_check = 0.1;
 
 void movemouse(RotatedRect trackBox, int width, int height) {
 	Point2f centr = trackBox.center;
-	width = width * (1 - 2*border_check);
-	height = height * (1 - 2*border_check);
-	//normalizacja 100% video to 100% ekranu
-	/*Size2f size=trackBox.size;
-	 cout<<"wysokosc "<<size.height<<", szerokosc"<<size.width<<endl;
-	 cout<<size.height/size.width<<endl;*/
-	int iks = (int) centr.x * (screenWidth / width);
-	int igrek = (int) centr.y * (screenHeight / height);
-	//ustawiamy kursor (btw 0,0 to lewy gorny rog ekranu)
-	SetCursorPos(screenWidth-iks, igrek);
-	//cout<<iks<<","<<igrek<<endl;
+
+	//genialne przeliczniki wyznaczone metoda prob i bledow
+	float pos_x = (((centr.x)- (width * 2 *  border_check)) / (width* (1 - 2*border_check)))*100/80;
+	float pos_y = (((centr.y)- (height *  2 * border_check)) / (height* (1 - 2*border_check)))*100/70;
+
+	//zeby ruch prawo-lewo byl w dobra strone
+	int iks = (int) screenWidth-(pos_x * screenWidth);
+	int igrek = (int) (pos_y * screenHeight);
+	SetCursorPos(iks, igrek);
+	cout <<width<<","<<height << "	" <<pos_x<<","<<pos_y << "		" <<iks<<","<<igrek<< "		" <<centr.x<<","<<centr.y<<endl;
 }
 
 //Klik myszki 1- prawy 0-lewy
@@ -274,9 +273,9 @@ int lost_mouse(VideoCapture& cap) {
 
 					//maszyna stanów
 					//sprawdzanie, czy reka znajduje sie w ramce kontrolnej
-					if(pozX<movie_width * border_check || pozX>movie_width * (1-2*border_check) || pozY<movie_height * border_check || pozY>movie_height * (1-2*border_check)){
+					if(pozX<movie_width * border_check || pozX>movie_width * (1-border_check) || pozY<movie_height * border_check || pozY>movie_height * (1-border_check)){
 						//obecnie poza ramka
-						if(pozX1<movie_width * border_check || pozX1>movie_width * (1-2*border_check) || pozY1<movie_height * border_check || pozY1>movie_height * (1-2*border_check)){
+						if(pozX1<movie_width * border_check || pozX1>movie_width * (1-border_check) || pozY1<movie_height * border_check || pozY1>movie_height * (1-border_check)){
 							//obecnie i wczesniej poza ramka => reka poza ramka
 							stan = 0;
 						}else{
@@ -285,7 +284,7 @@ int lost_mouse(VideoCapture& cap) {
 						}
 					}else{
 						//obecnie w ramce
-						if(pozX1<movie_width * border_check || pozX1>movie_width * (1-2*border_check) || pozY1<movie_height * border_check || pozY1>movie_height * (1-2*border_check)){
+						if(pozX1<movie_width * border_check || pozX1>movie_width * (1-border_check) || pozY1<movie_height * border_check || pozY1>movie_height * (1-border_check)){
 							//obecnie w ramce, wczesniej poza ramka => reka sie pojawia
 							stan = 1;
 						}else{
