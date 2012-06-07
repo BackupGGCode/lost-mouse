@@ -264,7 +264,7 @@ int lost_mouse(VideoCapture& cap) {
 					pozY2 = pozY1;
 					pozY1 = pozY;
 
-					//przypisanie aktualnego stanu
+					//przypisanie aktualnego stanu maszynki
 					area = trackBox.size.height * trackBox.size.width;
 					rot = normalizeAngle(trackBox.angle);
 					pozY = trackBox.center.y;
