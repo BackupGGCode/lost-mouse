@@ -20,7 +20,7 @@ using namespace std;
  * mod5 = 0 - ilosc wykrytych cech do klinkniecia, nawet jesli nie zaszlo
  * mod7 = 0 spowolnione odtwarzenie video
  */
-int debug = 3 * 7;
+int debug = 1;
 
 //wlaczanie/wylaczanie sterowania kursorem i klikania
 /*
@@ -114,7 +114,7 @@ float inline normalizeAngle(float angle) {
 }
 
 int lost_mouse(VideoCapture& cap) {
-	cout << endl << "w funkcji lost_mouse(VideoCapture&)" << endl;
+
 
 	//wylaczenie sterowania myszka
 	mouse_enable = 0;
@@ -362,7 +362,7 @@ int lost_mouse(VideoCapture& cap) {
 							if(mouse_enable==2){
 								mouseClick(0);
 							}
-
+							cout << "Wykryto lewy przycisk myszy" << endl;
 
 							if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
 								cout << setw(5) << frame_counter << "; LPM;" << setw(3) << areaD << ";"
@@ -389,7 +389,7 @@ int lost_mouse(VideoCapture& cap) {
 							if(mouse_enable==2){
 								mouseClick(1);
 							}
-
+							cout << "Wykryto prawy przycisk myszy" << endl;
 
 							if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
 								cout << setw(5) << frame_counter << "; PPM;" << setw(3) << areaD << ";"
@@ -484,12 +484,6 @@ int lost_mouse(VideoCapture& cap) {
 		case 'b':
 			backprojMode = !backprojMode;
 			break;
-		case ',':
-			cout << frame_counter << " znacznik LLP" << endl;
-			break;
-		case '.':
-			cout << frame_counter << " znacznik PPM" << endl;
-			break;
 		case 'c':
 			trackObject = 0;
 			frame_counter = 0;
@@ -582,22 +576,6 @@ int main(int argc, const char** argv) {
 	select_mouse_autom = argc < 3 || str_select.compare(argv[2]) == 0;
 	cout << "automatyczne zaznaczanie dłoni: " << (select_mouse_autom ? "true" : "false") << endl;
 
-	//wlaczanie/wylaczanie klikania
-	/*string str_mouse_null("null");
-	string str_mouse_move("move");
-	string str_mouse_click("click");
-	if (argc < 4 || str_mouse_null.compare(argv[3]) == 0) {
-		//wczytywanie z kamery
-		mouse_enable=0;
-	} else if(argc < 4 || str_mouse_move.compare(argv[3]) == 0){
-		//wczytywanie z pliku
-		mouse_enable=1;
-	}else{
-		//obsluga blednego pliku video
-		mouse_enable=2;
-	}
-*/
-	cout << mouse_enable << endl;
 
 	help();
 
@@ -607,9 +585,6 @@ int main(int argc, const char** argv) {
 
 	cout << endl << after - before << " - czas sledzenia dloni [ms]" << endl;
 
-//test kliniecie prawym przyciskiem myszy
-//SetCursorPos(300, 300);
-//mouseClick(1);
 
 	return 0;
 }
