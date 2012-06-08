@@ -30,6 +30,7 @@ bool showHist = true;
 //stan sledzonego obiektu
 int trackObject = 0;
 Mat image;
+Mat image_mirror;
 Point origin;
 Rect selection;
 //0-select myszka, 1-select automatycznie ze srodka filmu
@@ -48,10 +49,10 @@ void movemouse(RotatedRect trackBox, int width, int height) {
 	float pos_y = (((centr.y)- (height *  2 * border_check)) / (height* (1 - 2*border_check)))*100/70;
 
 	//zeby ruch prawo-lewo byl w dobra strone
-	int iks = (int) screenWidth-(pos_x * screenWidth);
+	int iks = (int) (pos_x * screenWidth);
 	int igrek = (int) (pos_y * screenHeight);
 	SetCursorPos(iks, igrek);
-	cout <<width<<","<<height << "	" <<pos_x<<","<<pos_y << "		" <<iks<<","<<igrek<< "		" <<centr.x<<","<<centr.y<<endl;
+	//cout <<width<<","<<height << "	" <<pos_x<<","<<pos_y << "		" <<iks<<","<<igrek<< "		" <<centr.x<<","<<centr.y<<endl;
 }
 
 //Klik myszki 1- prawy 0-lewy
@@ -183,7 +184,8 @@ int lost_mouse(VideoCapture& cap) {
 		if (paused) {
 			frame_counter--;
 		} else {
-			cap >> image;
+			cap >> image_mirror;
+			flip(image_mirror, image, 1);
 			if (image.empty())
 				break;
 		}
