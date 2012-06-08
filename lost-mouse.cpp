@@ -22,6 +22,15 @@ using namespace std;
  */
 int debug = 3 * 7;
 
+//wlaczanie/wylaczanie sterowania kursorem i klikania
+/*
+ * 0 = wylaczone klikanie i ruszanie kursorem
+ * 1 = wlaczone tylko ruszanie kursorem
+ * 2 = ruszanie kursorem + klikanie
+ *
+ */
+int mouse_enable;
+
 //pokazywanie prawdopodobienstwa wstecznej propagacji histogramu
 bool backprojMode = false;
 //stan do rysowania zaznaczanego obszaru
@@ -52,7 +61,6 @@ void movemouse(RotatedRect trackBox, int width, int height) {
 	int iks = (int) (pos_x * screenWidth);
 	int igrek = (int) (pos_y * screenHeight);
 	SetCursorPos(iks, igrek);
-	cout <<width<<","<<height << "	" <<pos_x<<","<<pos_y << "		" <<iks<<","<<igrek<< "		" <<centr.x<<","<<centr.y<<endl;
 }
 
 //Klik myszki 1- prawy 0-lewy
@@ -107,6 +115,9 @@ float inline normalizeAngle(float angle) {
 
 int lost_mouse(VideoCapture& cap) {
 	cout << endl << "w funkcji lost_mouse(VideoCapture&)" << endl;
+
+	//wylaczenie sterowania myszka
+	mouse_enable = 0;
 
 	//obszar do automatycznego zaznaczenia dłoni
 	Rect selection_autom;
@@ -336,7 +347,9 @@ int lost_mouse(VideoCapture& cap) {
 					if(stan == 2){
 
 						//ruch kursorem myszy
-						movemouse(trackBox, movie_width, movie_height);
+						if(mouse_enable>0){
+							movemouse(trackBox, movie_width, movie_height);
+						}
 
 						//detekcja LPM
 						if (((/*wysokosc*/1 < pozYD && pozY > pozY4)
@@ -346,7 +359,10 @@ int lost_mouse(VideoCapture& cap) {
 							gesture = 1;
 							gesture_timeout = 5;
 
-							//mouseClick(0);
+							if(mouse_enable==2){
+								mouseClick(0);
+							}
+
 
 							if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
 								cout << setw(5) << frame_counter << "; LPM;" << setw(3) << areaD << ";"
@@ -370,7 +386,10 @@ int lost_mouse(VideoCapture& cap) {
 							gesture = 2;
 							gesture_timeout = 5;
 
-							//mouseClick(1);
+							if(mouse_enable==2){
+								mouseClick(1);
+							}
+
 
 							if (debug % 3 == 0 && (debug % 5 != 0 || debug == 0)) {
 								cout << setw(5) << frame_counter << "; PPM;" << setw(3) << areaD << ";"
@@ -479,6 +498,24 @@ int lost_mouse(VideoCapture& cap) {
 			histimg = Scalar::all(0);
 			cout << "reset histogramu" << endl;
 			break;
+		case 'm':
+			if(mouse_enable==0){
+				mouse_enable = 1;
+				cout << "ruszanie myszka wlaczone" << endl;
+			}else{
+				mouse_enable = 0;
+				cout << "ruszanie myszka i klikanie wylaczone" << endl;
+			}
+			break;
+		case 'k':
+			if(mouse_enable==0 || mouse_enable==1){
+				mouse_enable = 2;
+				cout << "ruszanie i klikanie myszka wlaczone" << endl;
+			}else{
+				mouse_enable = 1;
+				cout << "klikanie wylaczone" << endl;
+			}
+			break;
 		case ' ':
 			paused = !paused;
 			break;
@@ -498,6 +535,8 @@ void help() {
 			"\t'ESC' - wyjscie z programu\n"
 			"\t'c' - resetowanie zaznaczonego obszaru, zaprzestanie sledzenia\n"
 			"\t'b' - podglad widoku wstecznej projekcji histogramu\n"
+			"\t'm' - wlaczenie / wylaczenie sterowania kursorem\n"
+			"\t'k' - wlaczenie / wylaczenie klikania myszka\n"
 			"\t' ' - stopklatka\n";
 }
 
@@ -542,6 +581,23 @@ int main(int argc, const char** argv) {
 	string str_select("true");
 	select_mouse_autom = argc < 3 || str_select.compare(argv[2]) == 0;
 	cout << "automatyczne zaznaczanie dłoni: " << (select_mouse_autom ? "true" : "false") << endl;
+
+	//wlaczanie/wylaczanie klikania
+	/*string str_mouse_null("null");
+	string str_mouse_move("move");
+	string str_mouse_click("click");
+	if (argc < 4 || str_mouse_null.compare(argv[3]) == 0) {
+		//wczytywanie z kamery
+		mouse_enable=0;
+	} else if(argc < 4 || str_mouse_move.compare(argv[3]) == 0){
+		//wczytywanie z pliku
+		mouse_enable=1;
+	}else{
+		//obsluga blednego pliku video
+		mouse_enable=2;
+	}
+*/
+	cout << mouse_enable << endl;
 
 	help();
 
