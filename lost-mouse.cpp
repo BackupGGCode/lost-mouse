@@ -52,7 +52,7 @@ void movemouse(RotatedRect trackBox, int width, int height) {
 	int iks = (int) (pos_x * screenWidth);
 	int igrek = (int) (pos_y * screenHeight);
 	SetCursorPos(iks, igrek);
-	//cout <<width<<","<<height << "	" <<pos_x<<","<<pos_y << "		" <<iks<<","<<igrek<< "		" <<centr.x<<","<<centr.y<<endl;
+	cout <<width<<","<<height << "	" <<pos_x<<","<<pos_y << "		" <<iks<<","<<igrek<< "		" <<centr.x<<","<<centr.y<<endl;
 }
 
 //Klik myszki 1- prawy 0-lewy
