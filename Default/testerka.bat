@@ -13,7 +13,7 @@ echo *              Zbigniew Tekiela              *
 echo *                                            *
 echo **********************************************
 echo *         Akademia Gorniczo-Hutnicza         *
-echo *     im. Stanis³awa Staszica w Krakowie     *
+echo *     im. Stanislawa Staszica w Krakowie     *
 echo *                                            *
 echo *                Wydzial EAIiE               *
 echo *            Informatyka Stosowana           *

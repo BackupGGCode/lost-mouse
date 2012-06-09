@@ -574,7 +574,7 @@ int main(int argc, const char** argv) {
 //automatyczne zaznaczanie dłoni w srodku poczatkowej klatki video
 	string str_select("true");
 	select_mouse_autom = argc < 3 || str_select.compare(argv[2]) == 0;
-	cout << "automatyczne zaznaczanie dłoni: " << (select_mouse_autom ? "true" : "false") << endl;
+	cout << "automatyczne zaznaczanie dloni: " << (select_mouse_autom ? "true" : "false") << endl;
 
 
 	help();
