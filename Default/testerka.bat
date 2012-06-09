@@ -3,7 +3,7 @@ cls
 echo **********************************************
 echo *Program uruchamiajacy aplikacje "lost-mouse"*
 echo *  wykonana w ramach projektu z przedmiotu   *
-echo *          inferfesjy multimodlane           *
+echo *          inferfesjy multimodalane          *
 echo **********************************************
 echo *                  Autorzy:                  *
 echo *                                            *
