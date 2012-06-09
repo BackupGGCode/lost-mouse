@@ -72,11 +72,11 @@ if /I %auto%==T ( set auto=true ) else (set auto=false)
 echo.
 echo.
 echo.
-echo lost-mouse.exe %zrodlo% %auto%
+echo lost-mouse.exe "%zrodlo%" %auto%
 echo.
 echo.
 echo.
-lost-mouse.exe %zrodlo% %auto%
+lost-mouse.exe "%zrodlo%" %auto%
 goto end
 
 :defaultrun
